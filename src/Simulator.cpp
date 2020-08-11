@@ -37,10 +37,19 @@ void Simulator::run() {
 			u->executePhase1();
 		}
 
-		// PHASE 2 - Conflict resolution
-		for (auto& u : uavsList) {
-			u->executePhase2();
+		//communication
+		for (auto& u1 : uavsList) {
+			for (auto& u2 : uavsList) {
+				if (u1->id != u2->id) {
+					Radio::getInstance().sendMessage(simulation_time, u1, u2, u1->mov_y_vec, u1->mov_z_vec, u1->mov_s_vec);
+				}
+			}
 		}
+
+		// PHASE 2 - Conflict resolution
+		//for (auto& u : uavsList) {
+		//	u->executePhase2();
+		//}
 
 		cout << endl;
 		simulation_time += timeSlot;

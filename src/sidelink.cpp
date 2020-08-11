@@ -59,8 +59,9 @@ int main(int argc, char **argv) {
 
 	int time_N = 10;
 	int scenarioSize = 10000;
-	int nUAV = 8;
-	int nTasks_mov = 100;
+	int nUAV = 4;
+	int nPoI = 1;
+	int nTasks_mov = 4;
 	int nLt_mov = 1;
 	int nTasks_tx = 100;
 	int nLt_tx = 1;
@@ -85,6 +86,10 @@ int main(int argc, char **argv) {
 	const std::string &inputNumUAV = input.getCmdOption("-nu");
 	if (!inputNumUAV.empty()) {
 		nUAV = atoi(inputNumUAV.c_str());
+	}
+	const std::string &inputNumPoI = input.getCmdOption("-np");
+	if (!inputNumPoI.empty()) {
+		nPoI = atoi(inputNumPoI.c_str());
 	}
 	const std::string &inputNumTasksM = input.getCmdOption("-ntM");
 	if (!inputNumTasksM.empty()) {
@@ -113,8 +118,11 @@ int main(int argc, char **argv) {
 
 	Generic::getInstance().init(timeSlot);
 
-	UAV::generateRandomUAVs(uavsList, scenarioSize, nUAV, nTasks_mov, nLt_mov, nTasks_tx, nLt_tx);
-	PoI::generateRandomPoIs(poisList, scenarioSize, nUAV);
+	PoI::generateRandomPoIs(poisList, scenarioSize, nPoI);
+	UAV::generateRandomUAVs(uavsList, poisList, scenarioSize, nUAV, nTasks_mov, nLt_mov, nTasks_tx, nLt_tx);
+	for (auto& u : uavsList) {
+		u->init();
+	}
 
 	Simulator::getInstance().init(0, time_N);
 	Simulator::getInstance().setUAVs(uavsList);

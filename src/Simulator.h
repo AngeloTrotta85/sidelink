@@ -21,6 +21,7 @@
 #include "Generic.h"
 #include "UAV.h"
 #include "PoI.h"
+#include "Radio.h"
 
 class Simulator {
 public:
