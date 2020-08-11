@@ -20,6 +20,7 @@
 #include <random>
 #include <chrono>
 
+#include "RandomGenerator.h"
 #include "Simulator.h"
 #include "Generic.h"
 #include "UAV.h"
@@ -56,14 +57,27 @@ int main(int argc, char **argv) {
 	std::list<UAV *> uavsList;
 	std::list<PoI *> poisList;
 
-	int time_N = 3600;
+	int time_N = 10;
 	int scenarioSize = 10000;
 	int nUAV = 8;
+	int nTasks_mov = 100;
+	int nLt_mov = 1;
+	int nTasks_tx = 100;
+	int nLt_tx = 1;
 	double timeSlot = 1;
 
 
 	InputParser input(argc, argv);
 
+	const std::string &seedUser = input.getCmdOption("-seed");
+	if (!seedUser.empty()) {
+		int seedR = atoi(seedUser.c_str());
+		RandomGenerator::getInstance().setSeed(seedR);
+	}
+	else {
+		unsigned seedR = std::chrono::system_clock::now().time_since_epoch().count();
+		RandomGenerator::getInstance().setSeed(seedR);
+	}
 	const std::string &inputTimeSim = input.getCmdOption("-time");
 	if (!inputTimeSim.empty()) {
 		time_N = atoi(inputTimeSim.c_str());
@@ -71,6 +85,22 @@ int main(int argc, char **argv) {
 	const std::string &inputNumUAV = input.getCmdOption("-nu");
 	if (!inputNumUAV.empty()) {
 		nUAV = atoi(inputNumUAV.c_str());
+	}
+	const std::string &inputNumTasksM = input.getCmdOption("-ntM");
+	if (!inputNumTasksM.empty()) {
+		nTasks_mov = atoi(inputNumTasksM.c_str());
+	}
+	const std::string &inputNumNLM = input.getCmdOption("-ltM");
+	if (!inputNumNLM.empty()) {
+		nLt_mov = atoi(inputNumNLM.c_str());
+	}
+	const std::string &inputNumTasksT = input.getCmdOption("-ntT");
+	if (!inputNumTasksT.empty()) {
+		nTasks_tx = atoi(inputNumTasksT.c_str());
+	}
+	const std::string &inputNumNLT = input.getCmdOption("-ltT");
+	if (!inputNumNLT.empty()) {
+		nLt_tx = atoi(inputNumNLT.c_str());
 	}
 	const std::string &scenarioMaxVal = input.getCmdOption("-scenario");
 	if (!scenarioMaxVal.empty()) {
@@ -83,7 +113,7 @@ int main(int argc, char **argv) {
 
 	Generic::getInstance().init(timeSlot);
 
-	UAV::generateRandomUAVs(uavsList, scenarioSize, nUAV);
+	UAV::generateRandomUAVs(uavsList, scenarioSize, nUAV, nTasks_mov, nLt_mov, nTasks_tx, nLt_tx);
 	PoI::generateRandomPoIs(poisList, scenarioSize, nUAV);
 
 	Simulator::getInstance().init(0, time_N);

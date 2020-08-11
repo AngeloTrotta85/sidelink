@@ -7,6 +7,8 @@
 
 #include "Simulator.h"
 
+using namespace std;
+
 Simulator::Simulator() {
 	simulation_time = 0;
 	end_time = 0;
@@ -28,14 +30,19 @@ void Simulator::run() {
 
 	while (((end_time < 0) || (simulation_time < end_time)) && (!endSimulation)) {
 
+		cout << "SimTime: " << simulation_time << endl;
+
 		// PHASE 1 - Bundle construction
-
 		for (auto& u : uavsList) {
-
+			u->executePhase1();
 		}
 
 		// PHASE 2 - Conflict resolution
+		for (auto& u : uavsList) {
+			u->executePhase2();
+		}
 
+		cout << endl;
 		simulation_time += timeSlot;
 	}
 
