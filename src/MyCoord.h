@@ -72,6 +72,17 @@ class MyCoord
     void copy(const MyCoord& other) { x = other.x; y = other.y; z = other.z; }
 
   public:
+
+    static void cartesian2polar(double x, double y, double &r, double &theta) {
+    	r = hypot(x, y);
+    	theta = atan2(y, x);
+    }
+
+    static void polar2cartesian(double r, double theta, double &x, double &y) {
+    	x = r * cos(theta);
+    	y = r * sin(theta);
+    }
+
     /**
      * Tests whether two doubles are close enough to be declared equal.
      * Returns true if parameters are at most epsilon apart, false

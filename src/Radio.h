@@ -41,8 +41,15 @@ public:
 
 
 public:
+	void registerUAV(UAV *u);
+	bool checkCBBAmsg(UAV *s, UAV *r);
+
 	void sendMessage(int tk, UAV *uSnd, UAV *uRcv, std::vector<double> &y_vec, std::vector<int> &z_vec, std::vector<int> &s_vec);
 
+	void sendBroadcast (int tk, UAV *uSnd, std::vector<double> &y_vec, std::vector<int> &z_vec, std::vector<int> &s_vec);
+
+private:
+	std::list<UAV *> uavList;
 };
 
 #endif /* RADIO_H_ */

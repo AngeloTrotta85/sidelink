@@ -57,15 +57,24 @@ int main(int argc, char **argv) {
 	std::list<UAV *> uavsList;
 	std::list<PoI *> poisList;
 
-	int time_N = 10;
-	int scenarioSize = 10000;
+	int time_N = 100000;
+	int scenarioSize = 1000;
 	int nUAV = 4;
 	int nPoI = 1;
 	int nTasks_mov = 4;
 	int nLt_mov = 1;
 	int nTasks_tx = 100;
 	int nLt_tx = 1;
-	double timeSlot = 1;
+	double timeSlot = 0.001;
+
+	//UAV
+	double velocity_ms = 10;
+
+	//CBBA
+	double phase1_interval_sec = 3;
+	double phase1_interval_var = 1;
+	double cbba_beacon_interval_sec = 3;
+	double cbba_beacon_interval_var = 0.1;
 
 
 	InputParser input(argc, argv);
@@ -115,13 +124,34 @@ int main(int argc, char **argv) {
 	if (!timeSlot_string.empty()) {
 		timeSlot = atof(timeSlot_string.c_str());
 	}
+	const std::string &cbbaSec_string = input.getCmdOption("-cbbaS");
+	if (!cbbaSec_string.empty()) {
+		cbba_beacon_interval_sec = atof(cbbaSec_string.c_str());
+	}
+	const std::string &cbbaVar_string = input.getCmdOption("-cbbaV");
+	if (!cbbaVar_string.empty()) {
+		cbba_beacon_interval_var = atof(cbbaVar_string.c_str());
+	}
+	const std::string &uavVel_string = input.getCmdOption("-vel");
+	if (!uavVel_string.empty()) {
+		velocity_ms = atof(uavVel_string.c_str());
+	}
+	const std::string &p1Sec_string = input.getCmdOption("-p1S");
+	if (!p1Sec_string.empty()) {
+		phase1_interval_sec = atof(p1Sec_string.c_str());
+	}
+	const std::string &p1Var_string = input.getCmdOption("-p1V");
+	if (!p1Var_string.empty()) {
+		phase1_interval_var = atof(p1Var_string.c_str());
+	}
 
 	Generic::getInstance().init(timeSlot);
 
 	PoI::generateRandomPoIs(poisList, scenarioSize, nPoI);
 	UAV::generateRandomUAVs(uavsList, poisList, scenarioSize, nUAV, nTasks_mov, nLt_mov, nTasks_tx, nLt_tx);
 	for (auto& u : uavsList) {
-		u->init();
+		u->init(timeSlot, velocity_ms,
+				cbba_beacon_interval_sec, cbba_beacon_interval_var, phase1_interval_sec, phase1_interval_var);
 	}
 
 	Simulator::getInstance().init(0, time_N);
