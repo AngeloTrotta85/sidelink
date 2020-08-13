@@ -8,7 +8,12 @@
 #ifndef GENERIC_H_
 #define GENERIC_H_
 
+#include "list"
+#include "map"
+
 #include "MyCoord.h"
+
+class PoI;
 
 class Generic {
 public:
@@ -19,7 +24,11 @@ public:
 		return instance;
 	}
 private:
-	Generic(void){};         // Constructor? (the {} brackets) are needed here.
+	Generic(void){
+		timeSlot = 1;
+		maxVelocity = 3;
+		commRange = 100;
+	};         // Constructor? (the {} brackets) are needed here.
 
 	// C++ 11
 	// =======
@@ -45,12 +54,22 @@ public:
 		maxVelocity = maxVel;
 	}
 
+	void setCommParam(double communicationR) {
+		commRange = communicationR;
+	}
+
 	double getTime2Travel(MyCoord start, MyCoord end);
+
+	void build_static_positions_task_set(std::list<PoI *> &poisList);
 
 public:
 	double timeSlot;
 
 	double maxVelocity;
+
+	double commRange;
+
+	std::map<int, MyCoord> posTasks;
 
 };
 

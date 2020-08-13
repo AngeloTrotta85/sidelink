@@ -21,6 +21,7 @@ Simulator::Simulator() {
 void Simulator::init(int stime, int etime) {
 	simulation_time = stime;
 	end_time = etime;
+
 }
 
 void Simulator::run() {
@@ -78,5 +79,6 @@ void Simulator::run() {
 		//simulation_time += timeSlot;
 		++simulation_time;
 	}
-
 }
+
+

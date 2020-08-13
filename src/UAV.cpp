@@ -80,9 +80,15 @@ void UAV::init(double ts, double velMS, double cbbaMSGsec, double cbbaMSGvar, do
 	} while (nexttk <= 0);
 	next_phase1_tk = floor(nexttk / ts); //convert in time slot
 
-	buildTaskMap();
+	//buildTaskMap();
 
 	Radio::getInstance().registerUAV(this);
+}
+
+void UAV::initTasks(std::map<int, MyCoord> &tm) {
+	for (auto& el : tm) {
+		taskMap[el.first] = el.second;
+	}
 }
 
 void UAV::buildTaskMap(void) {

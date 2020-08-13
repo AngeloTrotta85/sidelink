@@ -67,6 +67,9 @@ int main(int argc, char **argv) {
 	int nLt_tx = 1;
 	double timeSlot = 0.001;
 
+	//Communication
+	double commRange = 100;
+
 	//UAV
 	double velocity_ms = 10;
 
@@ -144,14 +147,28 @@ int main(int argc, char **argv) {
 	if (!p1Var_string.empty()) {
 		phase1_interval_var = atof(p1Var_string.c_str());
 	}
+	const std::string &comRange_string = input.getCmdOption("-cr");
+	if (!comRange_string.empty()) {
+		commRange = atof(comRange_string.c_str());
+	}
 
 	Generic::getInstance().init(timeSlot);
+	Generic::getInstance().setUAVParam(velocity_ms);
+	Generic::getInstance().setCommParam(commRange);
 
 	PoI::generateRandomPoIs(poisList, scenarioSize, nPoI);
+
+	Generic::getInstance().build_static_positions_task_set(poisList);
+	nTasks_mov = Generic::getInstance().posTasks.size();
+
+	Generic::getInstance().build_static_comm_task_set(int nsc, int nsubf_in_supf);
+	nTasks_mov = Generic::getInstance().posTasks.size();
+
 	UAV::generateRandomUAVs(uavsList, poisList, scenarioSize, nUAV, nTasks_mov, nLt_mov, nTasks_tx, nLt_tx);
 	for (auto& u : uavsList) {
 		u->init(timeSlot, velocity_ms,
 				cbba_beacon_interval_sec, cbba_beacon_interval_var, phase1_interval_sec, phase1_interval_var);
+		u->initTasks(Generic::getInstance().posTasks);
 	}
 
 	Simulator::getInstance().init(0, time_N);

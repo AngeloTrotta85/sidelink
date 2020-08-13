@@ -38,6 +38,7 @@ public:
 	double update_calcMovIncreaseReward(std::list<int> &p_vec, int j);
 
 	void init(double ts, double velMS, double cbbaMSGsec, double cbbaMSGvar, double phase1MSGsec, double phase1MSGvar);
+	void initTasks(std::map<int, MyCoord> &tm);
 	void buildTaskMap(void);
 
 	void move(int tk);
