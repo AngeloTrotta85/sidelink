@@ -18,6 +18,7 @@
 #include <stack>
 #include <map>       // std::list
 
+#include "CommunicationManager.h"
 #include "Generic.h"
 #include "UAV.h"
 #include "PoI.h"

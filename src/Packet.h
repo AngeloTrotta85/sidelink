@@ -10,12 +10,14 @@
 
 class Packet {
 public:
-	Packet();
-	virtual ~Packet();
+	Packet(int idPoI);
+	virtual ~Packet() {};
 
 public:
 	int id;
 	static int idPKTGen;
+
+	int sourcePoI;
 };
 
 #endif /* PACKET_H_ */

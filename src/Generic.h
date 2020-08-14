@@ -61,6 +61,7 @@ public:
 	double getTime2Travel(MyCoord start, MyCoord end);
 
 	void build_static_positions_task_set(std::list<PoI *> &poisList);
+	void build_static_comm_task_set(int nsc, int nsubf_in_supf);
 
 public:
 	double timeSlot;
@@ -70,6 +71,7 @@ public:
 	double commRange;
 
 	std::map<int, MyCoord> posTasks;
+	std::map<int, MyCoord> commTasks;
 
 };
 

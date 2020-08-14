@@ -20,6 +20,7 @@
 #include <random>
 #include <chrono>
 
+#include "CommunicationManager.h"
 #include "RandomGenerator.h"
 #include "Simulator.h"
 #include "Generic.h"
@@ -73,11 +74,19 @@ int main(int argc, char **argv) {
 	//UAV
 	double velocity_ms = 10;
 
+	//PoI
+	int pkt_interval_npkt = 10;
+	int pkt_interval_slots = 100;
+
 	//CBBA
 	double phase1_interval_sec = 3;
 	double phase1_interval_var = 1;
 	double cbba_beacon_interval_sec = 3;
 	double cbba_beacon_interval_var = 0.1;
+
+	//channels
+	int nsc = 30;
+	int nsubf_in_supf = 60;
 
 
 	InputParser input(argc, argv);
@@ -152,16 +161,37 @@ int main(int argc, char **argv) {
 		commRange = atof(comRange_string.c_str());
 	}
 
+	const std::string &numberSubChannels_string = input.getCmdOption("-nsc");
+	if (!numberSubChannels_string.empty()) {
+		nsc = atoi(numberSubChannels_string.c_str());
+	}
+	const std::string &numberSubFrames_string = input.getCmdOption("-nsf");
+	if (!numberSubFrames_string.empty()) {
+		nsubf_in_supf = atoi(numberSubFrames_string.c_str());
+	}
+	const std::string &nPacket_string = input.getCmdOption("-npktint");
+	if (!nPacket_string.empty()) {
+		pkt_interval_npkt = atoi(nPacket_string.c_str());
+	}
+	const std::string &packetSlots_string = input.getCmdOption("-npktslot");
+	if (!packetSlots_string.empty()) {
+		pkt_interval_slots = atoi(packetSlots_string.c_str());
+	}
+
+
 	Generic::getInstance().init(timeSlot);
 	Generic::getInstance().setUAVParam(velocity_ms);
 	Generic::getInstance().setCommParam(commRange);
 
 	PoI::generateRandomPoIs(poisList, scenarioSize, nPoI);
+	for (auto& p : poisList) {
+		p->init(pkt_interval_npkt, pkt_interval_slots);
+	}
 
 	Generic::getInstance().build_static_positions_task_set(poisList);
 	nTasks_mov = Generic::getInstance().posTasks.size();
 
-	Generic::getInstance().build_static_comm_task_set(int nsc, int nsubf_in_supf);
+	Generic::getInstance().build_static_comm_task_set(nsc, nsubf_in_supf);
 	nTasks_mov = Generic::getInstance().posTasks.size();
 
 	UAV::generateRandomUAVs(uavsList, poisList, scenarioSize, nUAV, nTasks_mov, nLt_mov, nTasks_tx, nLt_tx);
@@ -170,6 +200,8 @@ int main(int argc, char **argv) {
 				cbba_beacon_interval_sec, cbba_beacon_interval_var, phase1_interval_sec, phase1_interval_var);
 		u->initTasks(Generic::getInstance().posTasks);
 	}
+
+	CommunicationManager::getInstance().init(uavsList, poisList, commRange, commRange, commRange);
 
 	Simulator::getInstance().init(0, time_N);
 	Simulator::getInstance().setUAVs(uavsList);

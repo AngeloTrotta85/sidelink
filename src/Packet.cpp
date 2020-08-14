@@ -9,12 +9,8 @@
 
 int Packet::idPKTGen = 0;
 
-Packet::Packet() {
-	// TODO Auto-generated constructor stub
+Packet::Packet(int idPoI) {
 	id = idPKTGen++;
-}
 
-Packet::~Packet() {
-	// TODO Auto-generated destructor stub
+	sourcePoI = idPoI;
 }
-

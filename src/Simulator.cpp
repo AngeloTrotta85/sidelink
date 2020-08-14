@@ -28,11 +28,19 @@ void Simulator::run() {
 
 	timeSlot = Generic::getInstance().timeSlot;
 	endSimulation = false;
-	int logTime = 1000;
+	//int logTime = 1000;
 
 	while (((end_time < 0) || (simulation_time <= end_time)) && (!endSimulation)) {
 
 		//cout << "SimTime: " << simulation_time << endl << endl;
+
+		CommunicationManager::getInstance().update(simulation_time);
+
+		//PoI packets generator
+		for (auto& p : poisList){
+			p->generatePackets_check(simulation_time);
+		}
+
 
 		// PHASE 1 - Bundle construction
 		for (auto& u : uavsList) {
@@ -69,11 +77,11 @@ void Simulator::run() {
 		//	u->executePhase2();
 		//}
 
-		if ((simulation_time % logTime) == 0) {
-			for (auto& u : uavsList) {
+		//if ((simulation_time % logTime) == 0) {
+			//for (auto& u : uavsList) {
 				//u->log_cout(simulation_time);
-			}
-		}
+			//}
+		//}
 
 		//cout << endl;
 		//simulation_time += timeSlot;
