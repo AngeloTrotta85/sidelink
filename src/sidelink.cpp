@@ -192,13 +192,14 @@ int main(int argc, char **argv) {
 	nTasks_mov = Generic::getInstance().posTasks.size();
 
 	Generic::getInstance().build_static_comm_task_set(nsc, nsubf_in_supf);
-	nTasks_mov = Generic::getInstance().posTasks.size();
+	nTasks_tx = Generic::getInstance().commTasks.size();
 
 	UAV::generateRandomUAVs(uavsList, poisList, scenarioSize, nUAV, nTasks_mov, nLt_mov, nTasks_tx, nLt_tx);
 	for (auto& u : uavsList) {
 		u->init(timeSlot, velocity_ms,
 				cbba_beacon_interval_sec, cbba_beacon_interval_var, phase1_interval_sec, phase1_interval_var);
 		u->initTasks(Generic::getInstance().posTasks);
+		u->initComTasks(Generic::getInstance().commTasks);
 	}
 
 	CommunicationManager::getInstance().init(uavsList, poisList, commRange, commRange, commRange);

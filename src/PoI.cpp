@@ -53,6 +53,11 @@ void PoI::generateRandomPoIs(std::list<PoI *> &pl, int ss, int np) {
 
 void PoI::init(int npkt, int slots) {
 	next_packet_generation_tk = RandomGenerator::getInstance().getIntUniform(0, 1000);
+
+	nPacket2Generate = npkt;
+	generationIntervalSlots = slots;
+
+	packetPerSecond = nPacket2Generate * (1000 / generationIntervalSlots);
 }
 
 void PoI::generatePackets_check(int tk) {
@@ -68,7 +73,7 @@ void PoI::generatePackets(int tk) {
 	for (int i = 0; i < nPacket2Generate; i++) {
 		Packet *newp = new Packet(id);
 
-		CommunicationManager::getInstance().sendPacketFromPoI(newp);
+		CommunicationManager::getInstance().sendPacketFromPoI(newp, tk);
 	}
 
 }

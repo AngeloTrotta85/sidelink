@@ -29,6 +29,11 @@ private:
 		commRange_u2u = 10;
 		commRange_p2u = 10;
 		commRange_u2bs = 10;
+
+		specialUAV_BS = new UAV(MyCoord::ZERO);
+
+		logSF = false;
+
 	};         // Constructor? (the {} brackets) are needed here.
 
 	// C++ 11
@@ -61,12 +66,19 @@ public:
 
 public:
 	void init(std::list<UAV *> &ul, std::list<PoI *> &pl, double cuu, double cpu, double cub);
-	void sendPacketFromPoI(Packet *p);
+	void sendPacketFromPoI(Packet *p, int tk);
+
+	void updateLt(void);
 
 	void update(int tk);
 
+	int get_tx_lt(UAV *u);
+
 public:
+	UAV *specialUAV_BS;
 	std::map<int, UAV *> uavList;
+	std::map<int, int> uavLtMap;
+
 	std::map<int, PoI *> poiList;
 
 	std::list<std::pair <node_t, node_t> > connGraph;
@@ -74,6 +86,8 @@ public:
 	double commRange_u2u;
 	double commRange_p2u;
 	double commRange_u2bs;
+
+	bool logSF;
 };
 
 #endif /* COMMUNICATIONMANAGER_H_ */

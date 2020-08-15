@@ -10,6 +10,8 @@
 
 #include "MyCoord.h"
 
+class UAV;
+
 class PoI {
 public:
 	PoI(MyCoord posCoord);
@@ -29,9 +31,15 @@ public:
 	int id;
 	static int idPoIGen;
 
+
+	int packetPerSecond;
+
 	int nPacket2Generate;
 	int generationIntervalSlots;
 	int next_packet_generation_tk;
+
+	// used fro CommunicationManager for tree building
+	UAV *father;
 };
 
 #endif /* POI_H_ */

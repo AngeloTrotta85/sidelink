@@ -29,12 +29,17 @@ void Simulator::run() {
 	timeSlot = Generic::getInstance().timeSlot;
 	endSimulation = false;
 	//int logTime = 1000;
+	bool logSF = false;
 
 	while (((end_time < 0) || (simulation_time <= end_time)) && (!endSimulation)) {
 
 		//cout << "SimTime: " << simulation_time << endl << endl;
 
+		if (logSF) {cout << "Simulation check 1" << endl; fflush(stdout);}
+
 		CommunicationManager::getInstance().update(simulation_time);
+
+		if (logSF) {cout << "Simulation check 2" << endl; fflush(stdout);}
 
 		//PoI packets generator
 		for (auto& p : poisList){
@@ -42,11 +47,25 @@ void Simulator::run() {
 		}
 
 
+		if (logSF) {cout << "Simulation check 3" << endl; fflush(stdout);}
+
+
 		// PHASE 1 - Bundle construction
 		for (auto& u : uavsList) {
 			u->executePhase1_check(simulation_time);
 			//u->executePhase1(simulation_time);
 		}
+
+
+		if (logSF) {cout << "Simulation check 4" << endl; fflush(stdout);}
+
+		for (auto& u : uavsList) {
+			u->executePhase1_comm_check(simulation_time);
+			//u->executePhase1(simulation_time);
+		}
+
+
+		if (logSF) {cout << "Simulation check 5" << endl; fflush(stdout);}
 
 		//communication
 		//for (auto& u1 : uavsList) {
@@ -62,15 +81,24 @@ void Simulator::run() {
 			u->comm_cbba(simulation_time);
 		}
 
+
+		if (logSF) {cout << "Simulation check 6" << endl; fflush(stdout);}
+
 		//communicate data
 		for (auto& u : uavsList) {
 			u->comm_data(simulation_time);
 		}
 
+
+		if (logSF) {cout << "Simulation check 7" << endl; fflush(stdout);}
+
 		//move
 		for (auto& u : uavsList) {
 			u->move(simulation_time);
 		}
+
+
+		if (logSF) {cout << "Simulation check 8" << endl; fflush(stdout);}
 
 		// PHASE 2 - Conflict resolution
 		//for (auto& u : uavsList) {

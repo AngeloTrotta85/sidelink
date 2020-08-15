@@ -44,9 +44,13 @@ public:
 	void registerUAV(UAV *u);
 	bool checkCBBAmsg(UAV *s, UAV *r);
 
-	void sendMessage(int tk, UAV *uSnd, UAV *uRcv, std::vector<double> &y_vec, std::vector<int> &z_vec, std::vector<int> &s_vec);
+	void sendMessage(int tk, UAV *uSnd, UAV *uRcv,
+			std::vector<double> &y_vec, std::vector<int> &z_vec, std::vector<int> &s_vec,
+			std::vector<double> &tx_y_vec, std::vector<int> &tx_z_vec, std::vector<int> &tx_s_vec);
 
-	void sendBroadcast (int tk, UAV *uSnd, std::vector<double> &y_vec, std::vector<int> &z_vec, std::vector<int> &s_vec);
+	void sendBroadcast (int tk, UAV *uSnd,
+			std::vector<double> &y_vec, std::vector<int> &z_vec, std::vector<int> &s_vec,
+			std::vector<double> &tx_y_vec, std::vector<int> &tx_z_vec, std::vector<int> &tx_s_vec);
 
 private:
 	std::list<UAV *> uavList;

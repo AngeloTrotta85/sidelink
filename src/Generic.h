@@ -11,6 +11,7 @@
 #include "list"
 #include "map"
 
+#include "UAV.h"
 #include "MyCoord.h"
 
 class PoI;

@@ -8,6 +8,8 @@
 #include <iostream>     // std::cout
 #include <fstream>      // std::ifstream
 
+#include "CommunicationManager.h"
+#include "Generic.h"
 #include "RandomGenerator.h"
 #include "UAV.h"
 #include "Radio.h"
@@ -15,6 +17,11 @@
 using namespace std;
 
 int UAV::idUAVGen = 0;
+
+UAV::UAV(MyCoord recCoord) {
+	actual_coord = recCoord;
+	id = BS_ID;
+}
 
 UAV::UAV(MyCoord recCoord, std::list<PoI *> &poiList, int nu, int movNt, int movLt, int txNt, int txLt) {
 	initVars(recCoord, poiList, nu, movNt, movLt, txNt, txLt);
@@ -80,6 +87,13 @@ void UAV::init(double ts, double velMS, double cbbaMSGsec, double cbbaMSGvar, do
 	} while (nexttk <= 0);
 	next_phase1_tk = floor(nexttk / ts); //convert in time slot
 
+	phase1_comm_interval_sec = phase1MSGsec;
+	phase1_comm_interval_var = phase1MSGvar;
+	do {
+		nexttk = RandomGenerator::getInstance().getRealNormal(phase1_comm_interval_sec, phase1_comm_interval_var);
+	} while (nexttk <= 0);
+	next_phase1_comm_tk = floor(nexttk / ts); //convert in time slot
+
 	//buildTaskMap();
 
 	Radio::getInstance().registerUAV(this);
@@ -88,6 +102,12 @@ void UAV::init(double ts, double velMS, double cbbaMSGsec, double cbbaMSGvar, do
 void UAV::initTasks(std::map<int, MyCoord> &tm) {
 	for (auto& el : tm) {
 		taskMap[el.first] = el.second;
+	}
+}
+
+void UAV::initComTasks(std::map<int, MyCoord> &tm) {
+	for (auto& el : tm) {
+		taskComMap[el.first] = el.second;
 	}
 }
 
@@ -112,7 +132,8 @@ void UAV::generateRandomUAVs(std::list<UAV *> &pl, std::list<PoI *> &poiList, in
 		//UAV *newU = new UAV(
 		//		MyCoord(RandomGenerator::getInstance().getRealUniform(0, ss), RandomGenerator::getInstance().getRealUniform(0, ss))
 		//);
-		double intrange = ((double) ss) / 100.0;
+		double intrange = ((double) ss) / 200.0;
+		//double intrange = ((double) ss) / 1.0;
 		UAV *newU = new UAV(
 				MyCoord(RandomGenerator::getInstance().getRealUniform(-intrange, intrange),
 						RandomGenerator::getInstance().getRealUniform(-intrange, intrange)),
@@ -249,12 +270,12 @@ void UAV::executePhase1(int tk) {
 			}
 			c[j] = maxGval;
 		}
-		//cout << "UAV" << id << " - c ["; for (auto const &el : c) cout << el << " "; cout << "]" << endl;
+		cout << "UAV" << id << " - c ["; for (auto const &el : c) cout << el << " "; cout << "]" << endl;
 
 		for (int j = 0; j < mov_nt; j++) {
 			h[j] = (c[j] > mov_y_vec[j]) ? 1 : 0;
 		}
-		//cout << "UAV" << id << " - h ["; for (auto const &el : h) cout << el << " "; cout << "]" << endl;
+		cout << "UAV" << id << " - h ["; for (auto const &el : h) cout << el << " "; cout << "]" << endl;
 
 		int maxJ = -1;
 		double maxJval = -1;
@@ -264,7 +285,7 @@ void UAV::executePhase1(int tk) {
 				maxJ = j;
 			}
 		}
-		//cout << "UAV" << id << " - maxJ: " << maxJ << endl;
+		cout << "UAV" << id << " - maxJ: " << maxJ << endl;
 
 		int maxN = -1;
 		double maxNval = -1;
@@ -306,6 +327,29 @@ void UAV::executePhase1(int tk) {
 	if (id == 0) {cout << "UAV" << id << " - AFTER  z ["; for (auto const &el : mov_z_vec) cout << el << " "; cout << "]" << endl;}
 	if (id == 0) {cout << "UAV" << id << " - AFTER  s ["; for (auto const &el : mov_s_vec) cout << el << " "; cout << "]" << endl;}
 	if (id == 0) {cout << endl;}
+}
+
+void UAV::executePhase1_comm_check(int tk) {
+	if (next_phase1_comm_tk <= tk) {
+
+		//cout << "UAV" << id << " - Sending broadcast at time slot " << tk << endl;
+
+		executePhase1_comm(tk);
+
+		double nexttk;
+		do {
+			nexttk = RandomGenerator::getInstance().getRealNormal(phase1_comm_interval_sec, phase1_comm_interval_var);
+		} while (nexttk <= 0);
+		next_phase1_comm_tk = floor(((double) nexttk) / tslot) + tk; //convert in time slot
+
+		//cout << "UAV" << id << " - Time " << tk << " - Next send time slot: " << next_cbba_beacon_tk << endl;
+	}
+
+}
+void UAV::executePhase1_comm(int tk) {
+	int my_tx_lt = CommunicationManager::getInstance().get_tx_lt(this);
+
+	cout << "My TX_Lt: " << my_tx_lt << endl;
 }
 
 void UAV::log_cout(int tk) {
@@ -415,7 +459,18 @@ void UAV::cbba_reset(int j) {
 	mov_z_vec[j] = -1;
 }
 
-void UAV::rcvMessage(int tk, UAV *uSnd, std::vector<double> &y_vec, std::vector<int> &z_vec, std::vector<int> &s_vec) {
+void UAV::rcvMessage(int tk, UAV *uSnd,
+			std::vector<double> &y_vec, std::vector<int> &z_vec, std::vector<int> &s_vec,
+			std::vector<double> &tx_y_vec, std::vector<int> &tx_z_vec, std::vector<int> &tx_s_vec) {
+	rcvMovMessage(tk, uSnd, y_vec, z_vec, s_vec);
+	rcvTxMessage(tk, uSnd, tx_y_vec, tx_z_vec, tx_s_vec);
+}
+
+void UAV::rcvTxMessage(int tk, UAV *uSnd, std::vector<double> &y_vec, std::vector<int> &z_vec, std::vector<int> &s_vec) {
+
+}
+
+void UAV::rcvMovMessage(int tk, UAV *uSnd, std::vector<double> &y_vec, std::vector<int> &z_vec, std::vector<int> &s_vec) {
 
 	if (id == 0) {cout << "UAV" << id << " - TIME: " << tk << " - received packet from UAV" << uSnd->id << endl;}
 	if (id == 0) {cout << "UAV" << id << " - RECEIVED y ["; for (auto const &el : y_vec) cout << el << " "; cout << "]" << endl;}
@@ -585,7 +640,7 @@ void UAV::comm_cbba(int tk) {
 
 		if (id == 0) {cout << "UAV" << id << " - Sending broadcast at time slot " << tk << endl << endl;}
 
-		Radio::getInstance().sendBroadcast(tk, this, mov_y_vec, mov_z_vec, mov_s_vec);
+		Radio::getInstance().sendBroadcast(tk, this, mov_y_vec, mov_z_vec, mov_s_vec, tx_y_vec, tx_z_vec, tx_s_vec);
 
 		double nexttk;
 		do {
@@ -595,6 +650,18 @@ void UAV::comm_cbba(int tk) {
 
 		//cout << "UAV" << id << " - Time " << tk << " - Next send time slot: " << next_cbba_beacon_tk << endl;
 	}
+}
+
+void UAV::rcvPacketFromPoI(Packet *p, int tk) {
+	pktInfo_t new_pkt;
+
+	new_pkt.pk = p;
+	new_pkt.time_drop_tk = -1;
+	new_pkt.time_sent_tk = -1;
+	new_pkt.time_received_tk = tk;
+
+	pktQueue.push_back(new_pkt);
+
 }
 
 void UAV::comm_data(int tk) {
