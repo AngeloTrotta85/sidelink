@@ -74,6 +74,10 @@ public:
 
 	int get_tx_lt(UAV *u);
 
+	bool isDirect (int idu);
+
+	double getRSSIhistory(int sub_frame, int sub_channel);
+
 public:
 	UAV *specialUAV_BS;
 	std::map<int, UAV *> uavList;

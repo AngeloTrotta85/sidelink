@@ -57,6 +57,11 @@ public:
 	double calcMovIncreaseReward_minusN(std::list<int> &p_vec, int n);
 	double update_calcMovIncreaseReward(std::list<int> &p_vec, int j);
 
+
+	double calcTxReward(std::list<int> &p_vec);
+	double calcTxIncreaseReward(std::list<int> &p_vec, int n, int j);
+	double update_calcTxIncreaseReward(std::list<int> &p_vec, int j);
+
 	void init(double ts, double velMS, double cbbaMSGsec, double cbbaMSGvar, double phase1MSGsec, double phase1MSGvar);
 	void initTasks(std::map<int, MyCoord> &tm);
 	void initComTasks(std::map<int, MyCoord> &tm);
@@ -64,7 +69,10 @@ public:
 
 	void move(int tk);
 	void comm_cbba(int tk);
+
 	void comm_data(int tk);
+	void comm_directBS(int tk);
+	void comm_multihop(int tk);
 
 	void rcvPacketFromPoI(Packet *p, int tk);
 

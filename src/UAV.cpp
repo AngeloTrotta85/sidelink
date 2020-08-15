@@ -21,6 +21,7 @@ int UAV::idUAVGen = 0;
 UAV::UAV(MyCoord recCoord) {
 	actual_coord = recCoord;
 	id = BS_ID;
+	father = nullptr;
 }
 
 UAV::UAV(MyCoord recCoord, std::list<PoI *> &poiList, int nu, int movNt, int movLt, int txNt, int txLt) {
@@ -132,7 +133,8 @@ void UAV::generateRandomUAVs(std::list<UAV *> &pl, std::list<PoI *> &poiList, in
 		//UAV *newU = new UAV(
 		//		MyCoord(RandomGenerator::getInstance().getRealUniform(0, ss), RandomGenerator::getInstance().getRealUniform(0, ss))
 		//);
-		double intrange = ((double) ss) / 200.0;
+		//double intrange = ((double) ss) / 200.0;
+		double intrange = 20;
 		//double intrange = ((double) ss) / 1.0;
 		UAV *newU = new UAV(
 				MyCoord(RandomGenerator::getInstance().getRealUniform(-intrange, intrange),
@@ -141,7 +143,7 @@ void UAV::generateRandomUAVs(std::list<UAV *> &pl, std::list<PoI *> &poiList, in
 				nu, movNt, movLt, txNt, txLt
 		);
 		pl.push_back(newU);
-		//std::cout << "UAV: " << i << " --> " << newU->recharge_coord << " - Energy:" << newU->max_energy << std::endl;
+		std::cout << "UAV: " << newU->id << " --> " << newU->actual_coord << std::endl;
 	}
 }
 
@@ -330,7 +332,14 @@ void UAV::executePhase1(int tk) {
 }
 
 void UAV::executePhase1_comm_check(int tk) {
-	if (next_phase1_comm_tk <= tk) {
+	if (	((tk % Generic::getInstance().superFrame) == 0)
+			//&&
+			//(!CommunicationManager::getInstance().isDirect(id))
+	) {
+		executePhase1_comm(tk);
+	}
+
+	/*if (next_phase1_comm_tk <= tk) {
 
 		//cout << "UAV" << id << " - Sending broadcast at time slot " << tk << endl;
 
@@ -343,13 +352,180 @@ void UAV::executePhase1_comm_check(int tk) {
 		next_phase1_comm_tk = floor(((double) nexttk) / tslot) + tk; //convert in time slot
 
 		//cout << "UAV" << id << " - Time " << tk << " - Next send time slot: " << next_cbba_beacon_tk << endl;
-	}
+	}*/
 
 }
 void UAV::executePhase1_comm(int tk) {
 	int my_tx_lt = CommunicationManager::getInstance().get_tx_lt(this);
 
-	cout << "My TX_Lt: " << my_tx_lt << endl;
+	cout << "UAV" << id << " - My TX_Lt: " << my_tx_lt << endl;
+
+	//TODO check Lt
+
+	if (id == 0) {cout << "TIME: " << tk << " Starting phase_comm 1 for UAV" << id << " with position " << actual_coord << endl;}
+
+	if (id == 0) {cout << "UAV" << id << " - BEFORE b ["; for (auto const &el : tx_b_vec) cout << el << " "; cout << "]" << endl;}
+	if (id == 0) {cout << "UAV" << id << " - BEFORE p ["; for (auto const &el : tx_p_vec) cout << el << " "; cout << "]" << endl;}
+	if (id == 0) {cout << "UAV" << id << " - BEFORE y ["; for (auto const &el : tx_y_vec) cout << el << " "; cout << "]" << endl;}
+	if (id == 0) {cout << "UAV" << id << " - BEFORE z ["; for (auto const &el : tx_z_vec) cout << el << " "; cout << "]" << endl;}
+	if (id == 0) {cout << "UAV" << id << " - BEFORE s ["; for (auto const &el : tx_s_vec) cout << el << " "; cout << "]" << endl;}
+
+	// DYNAMIC-VERSION
+	// if I have all the Lt tasks assigned, check if my bids are changed
+
+	// check il If have more
+	if (((int) (tx_b_vec.size())) > my_tx_lt) {
+		auto it = tx_b_vec.begin(); // initializing list iterator to beginning
+		advance(it, my_tx_lt); // iterator to point to size-th position
+
+		while (it != tx_b_vec.end()) {	//remove all the choice after the first
+			for (auto it_p = tx_p_vec.begin(); it_p != tx_p_vec.end(); it_p++) {		//search for the same task in p
+				if (*it_p == *it) {
+					tx_p_vec.erase(it_p);
+					break;
+				}
+			}
+
+			it = tx_b_vec.erase(it);
+		}
+	}
+
+	//check for changes
+	if (tx_b_vec.size() > 0) {
+		std::map<int, bool> mapChange;	//contains the map of changes
+		for (int j = 0; j < ((int) (tx_z_vec.size())); j++) {
+			if (tx_z_vec[j] == id) {
+				double actual_gain = update_calcTxIncreaseReward(tx_p_vec, j);
+				if (actual_gain >= tx_y_vec[j]) {
+					tx_y_vec[j] = actual_gain; //UPDATE ONLY
+				}
+				else {
+					tx_y_vec[j] = 0; //RESET
+					tx_z_vec[j] = -1;
+
+					mapChange[j] = true;
+				}
+			}
+		}
+		if (mapChange.size() > 0) {		//something changed and have to remove
+			bool is_the_first = false;
+
+			auto it_b = tx_b_vec.begin();
+			while (it_b != tx_b_vec.end()) {
+				for (auto& mc : mapChange) {
+					if (mc.first == *it_b) {
+						is_the_first = true;
+						break;
+					}
+				}
+				if (is_the_first) {		// remove all the b from now on (and the respectively in p)
+
+					while (it_b != tx_b_vec.end()) {	//remove all the choice after the first
+						for (auto it_p = tx_p_vec.begin(); it_p != tx_p_vec.end(); it_p++) {		//search for the same task in p
+							if (*it_p == *it_b) {
+								tx_p_vec.erase(it_p);
+								break;
+							}
+						}
+
+						it_b = tx_b_vec.erase(it_b);
+					}
+
+					break; // break the while. I removed everything here
+				}
+
+				it_b++;
+			}
+		}
+	}
+
+
+	//tx task
+	//cout << "Movement task with lt " << tx_lt << endl;
+	while (((int) (tx_b_vec.size())) < my_tx_lt) {
+		std::vector<double> c(tx_nt, 0);
+		std::vector<double> h(tx_nt, 0);
+
+		for (int j = 0; j < tx_nt; j++) {
+			double maxGval = -1;
+			for (unsigned int n = 0; n <= tx_p_vec.size(); n++) {
+				double actVal = calcTxIncreaseReward(tx_p_vec, n, j);
+				if (actVal > maxGval) {
+					maxGval = actVal;
+				}
+			}
+			c[j] = maxGval;
+		}
+		//cout << "UAV" << id << " - c ["; for (auto const &el : c) cout << el << " "; cout << "]" << endl;
+
+		for (int j = 0; j < tx_nt; j++) {
+			h[j] = (c[j] > tx_y_vec[j]) ? 1 : 0;
+		}
+		//cout << "UAV" << id << " - h ["; for (auto const &el : h) cout << el << " "; cout << "]" << endl;
+
+		int maxJ = -1;
+		std::list<int> maxJs;
+		double maxJval = -1;
+		for (int j = 0; j < tx_nt; j++) {
+			if ((c[j] * h[j]) > maxJval ) {
+				maxJval = c[j] * h[j];
+				maxJ = j;
+				maxJs.clear();
+				maxJs.push_back(j);
+			}
+			else if ((c[j] * h[j]) == maxJval) {
+				maxJs.push_back(j);
+			}
+		}
+		if (maxJs.size() > 1) {
+			auto it = maxJs.begin(); // initializing list iterator to beginning
+			advance(it, RandomGenerator::getInstance().getIntUniform(0, maxJs.size()-1)); // iterator to point to size-th position
+			maxJ = *it;
+		}
+		//cout << "UAV" << id << " - maxJ: " << maxJ << endl;
+
+		int maxN = -1;
+		double maxNval = -1;
+		for (unsigned int n = 0; n <= tx_p_vec.size(); n++) {
+			double maxAdd = calcTxIncreaseReward(tx_p_vec, n, maxJ);
+			if (maxAdd > maxNval ) {
+				maxNval = maxAdd;
+				maxN = n;
+			}
+		}
+		//cout << "UAV" << id << " - maxN: " << maxN << endl;
+
+		tx_b_vec.push_back(maxJ);
+		//cout << "UAV" << id << " - b ["; for (auto const &el : tx_b_vec) cout << el << " "; cout << "]" << endl;
+
+		if (maxN == ((int) (tx_p_vec.size()))) {
+			tx_p_vec.push_back(maxJ);
+		}
+		else if (maxN == 0) {
+			tx_p_vec.push_front(maxJ);
+		}
+		else {
+			auto it = tx_p_vec.begin(); // initializing list iterator to beginning
+			advance(it, maxN); // iterator to point to maxN-th position
+			tx_p_vec.insert(it, maxJ); // using insert to insert maxJ element at the maxN-th
+		}
+		//cout << "UAV" << id << " - p ["; for (auto const &el : tx_p_vec) cout << el << " "; cout << "]" << endl;
+
+		tx_y_vec[maxJ] = c[maxJ];
+		//cout << "UAV" << id << " - y ["; for (auto const &el : tx_y_vec) cout << el << " "; cout << "]" << endl;
+
+		tx_z_vec[maxJ] = id;
+		//cout << "UAV" << id << " - z ["; for (auto const &el : tx_z_vec) cout << el << " "; cout << "]" << endl;
+	}
+
+	if (id == 0) {cout << "UAV" << id << " - AFTER  b ["; for (auto const &el : tx_b_vec) cout << el << " "; cout << "]" << endl;}
+	if (id == 0) {cout << "UAV" << id << " - AFTER  p ["; for (auto const &el : tx_p_vec) cout << el << " "; cout << "]" << endl;}
+	if (id == 0) {cout << "UAV" << id << " - AFTER  y ["; for (auto const &el : tx_y_vec) cout << el << " "; cout << "]" << endl;}
+	if (id == 0) {cout << "UAV" << id << " - AFTER  z ["; for (auto const &el : tx_z_vec) cout << el << " "; cout << "]" << endl;}
+	if (id == 0) {cout << "UAV" << id << " - AFTER  s ["; for (auto const &el : tx_s_vec) cout << el << " "; cout << "]" << endl;}
+	if (id == 0) {cout << endl;}
+
+	cout << "UAV" << id << " - Finish phase1: " << my_tx_lt << endl;
 }
 
 void UAV::log_cout(int tk) {
@@ -447,6 +623,67 @@ double UAV::calcMovReward(std::list<int> &p_vec) {
 		return 0;
 	}
 
+}
+
+double UAV::calcTxIncreaseReward(std::list<int> &p_vec, int n, int j) {
+	std::list<int> tmp_vec;
+
+	auto it = p_vec.begin();
+	for (int i = 0; i <= ((int) (p_vec.size())); i++) {
+		if (i == n) {
+			tmp_vec.push_back(j);
+		}
+		else {
+			tmp_vec.push_back(*it);
+			it++;
+		}
+	}
+
+	double with = calcTxReward(tmp_vec);
+	double without = calcTxReward(p_vec);
+	return (with - without);
+}
+
+double UAV::update_calcTxIncreaseReward(std::list<int> &p_vec, int j) {
+	std::list<int> tmp_vec;
+
+	auto it = p_vec.begin();
+	for (int i = 0; i < ((int) (p_vec.size())); i++) {
+		if (*it != j) {
+			tmp_vec.push_back(*it);
+		}
+		it++;
+	}
+
+	double without = calcTxReward(tmp_vec);
+	double with = calcTxReward(p_vec);
+	return (with - without);
+}
+
+double UAV::calcTxReward(std::list<int> &p_vec) {
+	std::list<MyCoord> coord_vec;
+
+	for (auto& in : p_vec) {
+		if (taskComMap.count(in) == 0) {
+			fflush(stdout);
+			cerr << "Error in taskMap" << endl; fflush(stderr);
+			exit(EXIT_FAILURE);
+		}
+		else {
+			coord_vec.push_back(taskComMap[in]);
+		}
+	}
+
+	if (p_vec.size() == 0) {
+		return 0;
+	}
+	else {
+		double ris = 0;
+		for (auto& act : coord_vec) {
+			ris += 1.0 / (1.0 + CommunicationManager::getInstance().getRSSIhistory(act.x, act.y));
+		}
+		return ris;
+	}
 }
 
 void UAV::cbba_update(int j, double ykj, int zkj) {
@@ -665,9 +902,28 @@ void UAV::rcvPacketFromPoI(Packet *p, int tk) {
 }
 
 void UAV::comm_data(int tk) {
-
+	if (CommunicationManager::getInstance().isDirect(id)) {
+		comm_directBS(tk);
+	}
+	else {
+		comm_multihop(tk);
+	}
 }
 
+void UAV::comm_directBS(int tk) {
+	while (pktQueue.size() > 0) {
+		pktInfo_t p = pktQueue.front();
+		pktQueue.pop_front();
+
+		//TODO make stats
+
+		delete (p.pk);
+	}
+}
+
+void UAV::comm_multihop(int tk) {
+
+}
 
 
 

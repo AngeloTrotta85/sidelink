@@ -42,9 +42,9 @@ void Generic::build_static_positions_task_set(std::list<PoI *> &poisList) {
 void Generic::build_static_comm_task_set(int nsc, int nsubf_in_supf) {
 	int taskID = 0;
 
-	for (int x_nsc = 0; x_nsc < nsc; x_nsc++) {
-		for (int y_nsubf = 0; y_nsubf < nsubf_in_supf; y_nsubf++) {
-			commTasks[taskID++] = MyCoord(x_nsc, y_nsubf);
+	for (int x_nsubf = 0; x_nsubf < nsubf_in_supf; x_nsubf++) {
+		for (int y_nsc = 0; y_nsc < nsc; y_nsc++) {
+			commTasks[taskID++] = MyCoord(x_nsubf, y_nsc);
 		}
 	}
 }

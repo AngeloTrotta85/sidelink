@@ -149,7 +149,14 @@ void CommunicationManager::update(int tk) {
 			tmpUAVList.erase(itUmin);
 		}
 		else {
-			std::cerr << "Error in CommunicationManager::update" << std::endl;
+			//std::cerr << "Error in CommunicationManager::update" << std::endl;
+
+			//for (auto& u : uavList) {
+			//	cout << "UAV " << u.first
+			//			<< " - Time: " << tk
+			//			<< " " << u.second->actual_coord << " dist: " << u.second->actual_coord.length()
+			//			<< " - min: " << commRange_u2bs << endl;
+			//}
 			//exit (EXIT_FAILURE);
 		}
 
@@ -179,6 +186,7 @@ void CommunicationManager::update(int tk) {
 
 			connGraph.push_back(std::make_pair(nu_child, nu_father));
 			uav_father->childPoI.push_back(p.second);
+			p.second->father = uav_father;
 		}
 	}
 
@@ -217,8 +225,22 @@ void CommunicationManager::updateLt(void) {
 	for (auto& p : poiList) {
 		UAV *f = p.second->father;
 
+		bool reachBS = false;
 		while (f != nullptr) {
-			uavLtMap[f->id] += p.second->packetPerSecond;
+			if (f->id == BS_ID) {
+				reachBS = true;
+				break;
+			}
+			f = f->father;
+		}
+		if (reachBS) {
+			f = p.second->father;
+			if (f->id == BS_ID) {
+				break;
+			}
+			else {
+				uavLtMap[f->id] += p.second->packetPerSecond;
+			}
 			f = f->father;
 		}
 	}
@@ -252,6 +274,17 @@ int CommunicationManager::get_tx_lt(UAV *u) {
 	return uavLtMap[u->id];
 }
 
+bool CommunicationManager::isDirect (int idu) {
+	for (auto& e : connGraph) {
+		if (e.first.uav == idu) {
+			return (e.second.t == BS_T);
+		}
+	}
+	return false;
+}
 
+double CommunicationManager::getRSSIhistory(int sub_frame, int sub_channel) {
+	return (rand() % 10);
+}
 
 

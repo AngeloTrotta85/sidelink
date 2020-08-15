@@ -55,8 +55,10 @@ public:
 		maxVelocity = maxVel;
 	}
 
-	void setCommParam(double communicationR) {
+	void setCommParam(double communicationR, int nsc, int supFrame) {
 		commRange = communicationR;
+		superFrame = supFrame;
+		numSubChannels = nsc;
 	}
 
 	double getTime2Travel(MyCoord start, MyCoord end);
@@ -70,6 +72,8 @@ public:
 	double maxVelocity;
 
 	double commRange;
+	int numSubChannels;
+	int superFrame;
 
 	std::map<int, MyCoord> posTasks;
 	std::map<int, MyCoord> commTasks;

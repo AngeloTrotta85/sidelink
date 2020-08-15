@@ -94,7 +94,7 @@ void Simulator::run() {
 
 		//move
 		for (auto& u : uavsList) {
-			u->move(simulation_time);
+			//u->move(simulation_time);
 		}
 
 

@@ -67,6 +67,7 @@ int main(int argc, char **argv) {
 	int nTasks_tx = 100;
 	int nLt_tx = 1;
 	double timeSlot = 0.001;
+	int supFrame = 1000;
 
 	//Communication
 	double commRange = 100;
@@ -85,8 +86,8 @@ int main(int argc, char **argv) {
 	double cbba_beacon_interval_var = 0.1;
 
 	//channels
-	int nsc = 30;
-	int nsubf_in_supf = 60;
+	int nsc = 10;
+	int nsubf_in_supf = 10;
 
 
 	InputParser input(argc, argv);
@@ -160,7 +161,6 @@ int main(int argc, char **argv) {
 	if (!comRange_string.empty()) {
 		commRange = atof(comRange_string.c_str());
 	}
-
 	const std::string &numberSubChannels_string = input.getCmdOption("-nsc");
 	if (!numberSubChannels_string.empty()) {
 		nsc = atoi(numberSubChannels_string.c_str());
@@ -177,11 +177,14 @@ int main(int argc, char **argv) {
 	if (!packetSlots_string.empty()) {
 		pkt_interval_slots = atoi(packetSlots_string.c_str());
 	}
-
+	const std::string &superFrame_string = input.getCmdOption("-supF");
+	if (!superFrame_string.empty()) {
+		supFrame = atoi(superFrame_string.c_str());
+	}
 
 	Generic::getInstance().init(timeSlot);
 	Generic::getInstance().setUAVParam(velocity_ms);
-	Generic::getInstance().setCommParam(commRange);
+	Generic::getInstance().setCommParam(commRange, nsc, nsubf_in_supf);
 
 	PoI::generateRandomPoIs(poisList, scenarioSize, nPoI);
 	for (auto& p : poisList) {
