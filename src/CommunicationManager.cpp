@@ -371,6 +371,10 @@ void CommunicationManager::manageTransmissionsTimeSlot(int timek) {
 
 		if (logSF) {cout << "CommunicationManager::manageTransmissionsTimeSlot 2" << endl; fflush(stdout);}
 
+		if (el.second.size() > 0) {
+			countMultipleTx += 1;
+			sunMultipleTx += el.second.size();
+		}
 
 		for (auto& p : el.second) {
 			Packet *pkt = p.p;

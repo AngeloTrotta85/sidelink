@@ -55,10 +55,12 @@ public:
 		maxVelocity = maxVel;
 	}
 
-	void setCommParam(double communicationR, int nsc, int supFrame) {
+	void setCommParam(double communicationR, int nsc, int supFrame, int pkt_interval_npkt, double singlePoItest_distance) {
 		commRange = communicationR;
 		superFrame = supFrame;
 		numSubChannels = nsc;
+		pktLoad = pkt_interval_npkt;
+		uavDist= singlePoItest_distance;
 	}
 
 	double getTime2Travel(MyCoord start, MyCoord end);
@@ -74,6 +76,8 @@ public:
 	double commRange;
 	int numSubChannels;
 	int superFrame;
+	int pktLoad;
+	double uavDist;
 
 	std::map<int, MyCoord> posTasks;
 	std::map<int, MyCoord> commTasks;

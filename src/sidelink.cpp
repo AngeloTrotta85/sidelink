@@ -307,7 +307,7 @@ int main(int argc, char **argv) {
 
 	Generic::getInstance().init(timeSlot);
 	Generic::getInstance().setUAVParam(velocity_ms);
-	Generic::getInstance().setCommParam(commRange, nsc, nsubf_in_supf);
+	Generic::getInstance().setCommParam(commRange, nsc, nsubf_in_supf, pkt_interval_npkt, singlePoItest_distance);
 
 	//PoI::generateRandomPoIs(poisList, scenarioSize, nPoI);
 	PoI::generateSinglePoI(poisList, scenarioSize, singlePoItest_distance, nUAV);

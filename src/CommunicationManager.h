@@ -38,6 +38,9 @@ private:
 		sumPacketDropped = 0;
 		sumPacketDroppedQueue = 0;
 
+		countMultipleTx = 0;
+		sunMultipleTx = 0;
+
 	};         // Constructor? (the {} brackets) are needed here.
 
 	// C++ 11
@@ -124,6 +127,9 @@ public:
 	int sumPacketDelivered;
 	int sumPacketDropped;
 	int sumPacketDroppedQueue;
+
+	double countMultipleTx;
+	double sunMultipleTx;
 };
 
 #endif /* COMMUNICATIONMANAGER_H_ */

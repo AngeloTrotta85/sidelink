@@ -6,6 +6,7 @@
  */
 
 #include "Simulator.h"
+#include "Generic.h"
 
 using namespace std;
 
@@ -28,7 +29,7 @@ void Simulator::run() {
 
 	timeSlot = Generic::getInstance().timeSlot;
 	endSimulation = false;
-	int logTime = 1000*10;
+	int logTime = 1000*2;
 	bool logSF = false;
 
 	while (((end_time < 0) || (simulation_time <= end_time)) && (!endSimulation)) {
@@ -124,17 +125,32 @@ void Simulator::run() {
 	double ok = CommunicationManager::getInstance().sumPacketDelivered ;
 	double dc = CommunicationManager::getInstance().sumPacketDropped ;
 	double dq = CommunicationManager::getInstance().sumPacketDroppedQueue ;
+	double avgMultipleTx = 0;
+	if (CommunicationManager::getInstance().countMultipleTx > 0) {
+		avgMultipleTx = CommunicationManager::getInstance().sunMultipleTx / CommunicationManager::getInstance().countMultipleTx;
+	}
 	//cout << "Packets delivered: " << ok << endl;
 	//cout << "Packets dropped comm: " << dc << endl;
 	//cout << "Packets dropped queue: " << dq << endl;
-	if (ok == 0) {
+	double pdr = 0;
+	if (ok != 0) {
+		pdr = ok / (ok + dc + dq);
+	}
+	/*if (ok == 0) {
 		//cout << "PDR = 0" << endl;
 		cout << "0";
 	}
 	else {
 		//cout << "PDR = " << (ok / (ok + dc + dq)) << endl;
 		cout << (ok / (ok + dc + dq));
-	}
+	}*/
+
+	cout << uavsList.size()
+			<< " " << Generic::getInstance().pktLoad
+			<< " " << Generic::getInstance().uavDist
+			<< " " << avgMultipleTx
+			<< " " << pdr
+			<< endl;
 
 }
 
