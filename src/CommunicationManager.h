@@ -34,6 +34,10 @@ private:
 
 		logSF = false;
 
+		sumPacketDelivered = 0;
+		sumPacketDropped = 0;
+		sumPacketDroppedQueue = 0;
+
 	};         // Constructor? (the {} brackets) are needed here.
 
 	// C++ 11
@@ -72,7 +76,7 @@ public:
 	} pktToSend_t;
 
 public:
-	void init(std::list<UAV *> &ul, std::list<PoI *> &pl, double cuu, double cpu, double cub);
+	void init(std::list<UAV *> &ul, std::list<PoI *> &pl, double cuu, double cpu, double cub, int nsc);
 	void sendPacketFromPoI(Packet *p, int tk);
 
 	void updateLt(void);
@@ -87,8 +91,17 @@ public:
 
 	void sendDataRB(UAV *u, Packet *p, int timek, int channel);
 	void manageTransmissionsTimeSlot(int timek);
+	double calcReceivedPower (double distance);
 
-	bool checkTxSD (int pktID, std::list<pktToSend_t> &allPkst, double &rssi);
+	bool checkTxSD (pktToSend_t pkt, std::list<pktToSend_t> &allPkst, UAV *u_dst, std::map<int, double> &uav_interference_Map);
+	bool chekcTxNoInterference (UAV *u_src, UAV *u_dest);
+
+	double linear2dBm(double x);
+	double getUAVChannelLoss (double freq, double tx_height, double rx_height, double dist);
+
+	void packetDeliveretToBS(Packet *p);
+	void packetDropped(Packet *p);
+	void packetDroppedQueue(Packet *p);
 
 public:
 	UAV *specialUAV_BS;
@@ -106,6 +119,11 @@ public:
 	double commRange_u2bs;
 
 	bool logSF;
+
+	//STATS
+	int sumPacketDelivered;
+	int sumPacketDropped;
+	int sumPacketDroppedQueue;
 };
 
 #endif /* COMMUNICATIONMANAGER_H_ */

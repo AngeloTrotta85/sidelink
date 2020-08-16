@@ -28,14 +28,14 @@ void Simulator::run() {
 
 	timeSlot = Generic::getInstance().timeSlot;
 	endSimulation = false;
-	//int logTime = 1000;
+	int logTime = 1000*10;
 	bool logSF = false;
 
 	while (((end_time < 0) || (simulation_time <= end_time)) && (!endSimulation)) {
 
 		//cout << "SimTime: " << simulation_time << endl << endl;
 
-		if (logSF) {cout << "Simulation check 1" << endl; fflush(stdout);}
+		if (logSF) {cout << "Simulation check 1 - time " << simulation_time << endl; fflush(stdout);}
 
 		CommunicationManager::getInstance().update(simulation_time);
 
@@ -51,10 +51,10 @@ void Simulator::run() {
 
 
 		// PHASE 1 - Bundle construction
-		for (auto& u : uavsList) {
+		//for (auto& u : uavsList) {
 			//u->executePhase1_check(simulation_time);
 			////u->executePhase1(simulation_time);
-		}
+		//}
 
 
 		if (logSF) {cout << "Simulation check 4" << endl; fflush(stdout);}
@@ -88,6 +88,7 @@ void Simulator::run() {
 		for (auto& u : uavsList) {
 			u->comm_data(simulation_time);
 		}
+		if (logSF) {cout << "Simulation check 6+" << endl; fflush(stdout);}
 		CommunicationManager::getInstance().manageTransmissionsTimeSlot(simulation_time);
 
 
@@ -106,17 +107,35 @@ void Simulator::run() {
 		//	u->executePhase2();
 		//}
 
-		//if ((simulation_time % logTime) == 0) {
+		if ((simulation_time % logTime) == 0) {
+			cerr << "SimTime: " << simulation_time << endl;
 			//for (auto& u : uavsList) {
 				//u->log_cout(simulation_time);
 			//}
-		//}
+		}
 
 		//cout << endl;
 		//simulation_time += timeSlot;
 		++simulation_time;
-		if (simulation_time > 1000) exit(0);
+		//if (simulation_time > 1000) exit(0);
 	}
+
+	//make stats
+	double ok = CommunicationManager::getInstance().sumPacketDelivered ;
+	double dc = CommunicationManager::getInstance().sumPacketDropped ;
+	double dq = CommunicationManager::getInstance().sumPacketDroppedQueue ;
+	//cout << "Packets delivered: " << ok << endl;
+	//cout << "Packets dropped comm: " << dc << endl;
+	//cout << "Packets dropped queue: " << dq << endl;
+	if (ok == 0) {
+		//cout << "PDR = 0" << endl;
+		cout << "0";
+	}
+	else {
+		//cout << "PDR = " << (ok / (ok + dc + dq)) << endl;
+		cout << (ok / (ok + dc + dq));
+	}
+
 }
 
 

@@ -6,6 +6,7 @@
  */
 
 #include "Radio.h"
+#include "CommunicationManager.h"
 
 void Radio::sendMessage(int tk, UAV *uSnd, UAV *uRcv,
 		std::vector<double> &y_vec, std::vector<int> &z_vec, std::vector<int> &s_vec,
@@ -35,7 +36,7 @@ void Radio::sendBroadcast (int tk, UAV *uSnd,
 }
 
 bool Radio::checkCBBAmsg(UAV *s, UAV *r) {
-	return true;
+	return CommunicationManager::getInstance().chekcTxNoInterference (s, r);
 }
 
 

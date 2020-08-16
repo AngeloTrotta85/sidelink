@@ -75,7 +75,10 @@ double getUAVChannelLoss (double freq, double tx_height, double rx_height, doubl
 	//double temp = rx_height * (1.1 * log10(freq) - 0.7) - (1.56 * log10(freq) - 0.8);
 	double sigma = 8; // Standard Deviation for Shadowing Effect
 
-	double path_loss = 41.1 + 20.9 * log10(dist);
+	//double path_loss = 41.1 + 20.9 * log10(dist);
+	//double path_loss = 41.1 + 41.8 * log10(dist);
+	double path_loss = 41.1 + 41.8 * log10(dist);
+
 	//double path_loss = 46.3 + 33.9 * log10(freq) - 13.82 * log10(tx_height) - temp + log10(dist/1000.0)*(44.9 - 6.55 * log10(tx_height))+C;
 	double channel_loss = -path_loss + (-1 * sigma * RandomGenerator::getInstance().getRealNormal(0, 1));
 
@@ -168,7 +171,7 @@ int main(int argc, char **argv) {
 	std::list<UAV *> uavsList;
 	std::list<PoI *> poisList;
 
-	int time_N = 100000;
+	int time_N = 1 * 60 * 60 * 1000;
 	int scenarioSize = 1000;
 	int nUAV = 4;
 	int nPoI = 1;
@@ -184,9 +187,10 @@ int main(int argc, char **argv) {
 
 	//UAV
 	double velocity_ms = 10;
+	double max_queue = 1000;
 
 	//PoI
-	int pkt_interval_npkt = 10;
+	int pkt_interval_npkt = 20;
 	int pkt_interval_slots = 1000;
 
 	//CBBA
@@ -296,6 +300,10 @@ int main(int argc, char **argv) {
 	if (!singlePoIdist_string.empty()) {
 		singlePoItest_distance = atof(singlePoIdist_string.c_str());
 	}
+	const std::string &maxQueue_string = input.getCmdOption("-uavMaxQ");
+	if (!maxQueue_string.empty()) {
+		max_queue = atoi(maxQueue_string.c_str());
+	}
 
 	Generic::getInstance().init(timeSlot);
 	Generic::getInstance().setUAVParam(velocity_ms);
@@ -319,19 +327,19 @@ int main(int argc, char **argv) {
 		u->init(timeSlot, velocity_ms,
 				cbba_beacon_interval_sec, cbba_beacon_interval_var, phase1_interval_sec, phase1_interval_var);
 		u->initTasks(Generic::getInstance().posTasks);
-		u->initComTasks(Generic::getInstance().commTasks, nsubf_in_supf, nsc);
+		u->initComTasks(Generic::getInstance().commTasks, nsubf_in_supf, nsc, max_queue);
 	}
 	//exit(0);
 
-	for (int d = 100; d <= 100000; d+=100) {
+	/*for (int d = 100; d <= 1000; d+=100) {
 		MyCoord rcv(0, d);
 		test(rcv, poisList, nUAV, nTasks_mov, nLt_mov, nTasks_tx, nLt_tx);
 		cout << endl;
-	}
+	}*/
 	//test(MyCoord(0, 4), poisList, nUAV, nTasks_mov, nLt_mov, nTasks_tx, nLt_tx);
-	exit(EXIT_FAILURE);
+	//exit(EXIT_FAILURE);
 
-	CommunicationManager::getInstance().init(uavsList, poisList, commRange, commRange, commRange);
+	CommunicationManager::getInstance().init(uavsList, poisList, commRange, commRange, commRange, nsc);
 
 	Simulator::getInstance().init(0, time_N);
 	Simulator::getInstance().setUAVs(uavsList);

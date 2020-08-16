@@ -69,7 +69,7 @@ public:
 
 	void init(double ts, double velMS, double cbbaMSGsec, double cbbaMSGvar, double phase1MSGsec, double phase1MSGvar);
 	void initTasks(std::map<int, MyCoord> &tm);
-	void initComTasks(std::map<int, MyCoord> &tm, int x_frame, int y_channel);
+	void initComTasks(std::map<int, MyCoord> &tm, int x_frame, int y_channel, int max_queue);
 	void buildTaskMap(void);
 
 	void move(int tk);
@@ -109,6 +109,10 @@ public:
 	double phase1_comm_interval_var;
 	int next_phase1_comm_tk;
 
+	int maxPacketQueue;
+
+	int sumLastFrameReceived;
+
 	int id;
 	static int idUAVGen;
 
@@ -137,6 +141,7 @@ public:
 	std::list <pktInfo_t> pktQueue;
 
 	std::vector< std::vector <double> > rssiRCV;
+	std::vector< std::vector <double> > rssiRCV_dBm;
 
 	// used by CommunicationManager for tree building
 	UAV *father;

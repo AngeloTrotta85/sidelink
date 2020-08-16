@@ -45,7 +45,7 @@ void PoI::generateSinglePoI(std::list<PoI *> &pl, int ss, int dist, int nu) {
 	PoI *newP = new PoI(poipos);
 	pl.push_back(newP);
 
-	std::cout << "PoI --> " << newP->actual_coord << std::endl;
+	std::cerr << "PoI --> " << newP->actual_coord << std::endl;
 }
 
 void PoI::generateRandomPoIs(std::list<PoI *> &pl, int ss, int np) {
