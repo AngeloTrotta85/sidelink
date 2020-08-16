@@ -20,6 +20,8 @@
 #include <random>
 #include <chrono>
 
+#include <complex>      // std::complex, std::real
+
 #include "CommunicationManager.h"
 #include "RandomGenerator.h"
 #include "Simulator.h"
@@ -53,6 +55,114 @@ private:
 	std::vector <std::string> tokens;
 };
 
+double linear2dBm(double x) {
+	return (10.0 * log10(x * 1000.0));
+}
+
+double getUAVChannelLoss_old (double freq, double tx_height, double rx_height, double dist) {
+	double C = 0;
+	double temp = rx_height * (1.1 * log10(freq) - 0.7) - (1.56 * log10(freq) - 0.8);
+	double sigma = 8; // Standard Deviation for Shadowing Effect
+
+	double path_loss = 46.3 + 33.9 * log10(freq) - 13.82 * log10(tx_height) - temp + log10(dist/1000.0)*(44.9 - 6.55 * log10(tx_height))+C;
+	double channel_loss = -path_loss + (-1 * sigma * RandomGenerator::getInstance().getRealNormal(0, 1));
+
+	return channel_loss;
+}
+
+double getUAVChannelLoss (double freq, double tx_height, double rx_height, double dist) {
+	//double C = 0;
+	//double temp = rx_height * (1.1 * log10(freq) - 0.7) - (1.56 * log10(freq) - 0.8);
+	double sigma = 8; // Standard Deviation for Shadowing Effect
+
+	double path_loss = 41.1 + 20.9 * log10(dist);
+	//double path_loss = 46.3 + 33.9 * log10(freq) - 13.82 * log10(tx_height) - temp + log10(dist/1000.0)*(44.9 - 6.55 * log10(tx_height))+C;
+	double channel_loss = -path_loss + (-1 * sigma * RandomGenerator::getInstance().getRealNormal(0, 1));
+
+	return channel_loss;
+}
+void test(MyCoord rcv, std::list<PoI *> &poiList, int nu, int movNt, int movLt, int txNt, int txLt) {
+
+	nu = movNt = movLt = txNt = txLt = 0;
+
+	cout << "test 1" << endl; fflush(stdout);
+
+	UAV *u1 = new UAV(MyCoord::ZERO, poiList, nu, movNt, movLt, txNt, txLt);
+	UAV *u2 = new UAV(rcv, poiList, nu, movNt, movLt, txNt, txLt);
+	//UAV *u2 = new UAV(MyCoord(0,50), poiList, nu, movNt, movLt, txNt, txLt);
+
+	double UAV_TX_pt = 0.2512; //%%%% 0.2512 Watt = 24 dBm; % All UAVs transmit with same Power (24 dBm)
+	double UAV_TX_pt_db = 24;
+	double GAIN_ag = pow(10.0, 0.6);  //% Transmiter Antenna Gain (6 dB)
+	double GAIN_ag_db = 6;
+	double freq = 3410;
+	double tx_height = 30;
+	double rx_height = 30;
+	double distance = u1->actual_coord.distance(u2->actual_coord);
+	double loss_dB = getUAVChannelLoss(freq,tx_height,rx_height,distance);
+
+	cout << "Loss at distance: " << distance << ": " << loss_dB << endl;
+
+	double fading_variance = 1.59; // Fading model is Complex Gaussian Random Variable
+	double chan_real = sqrt(fading_variance/2) * RandomGenerator::getInstance().getRealNormal(0, 1);
+	double chan_complex = RandomGenerator::getInstance().getRealNormal(0, 1);
+	std::complex<double> chan (chan_real, chan_complex);
+	//chan = sqrt(fading_variance/2) * RandomGenerator::getInstance().getRealNormal(0, 1) + 1i*RandomGenerator::getInstance().getRealNormal(0, 1);
+	double chan_value = std::abs(chan); // fading loss
+
+	cout << "chan: " << chan << endl;
+	cout << "chan_value: " << chan_value << endl;
+
+	cout << "UAV_TX_pt: " << UAV_TX_pt << endl;
+	cout << "GAIN_ag: " << GAIN_ag << endl;
+	cout << "pow(10.0, loss_dB/10.0): " << pow(10.0, loss_dB/10.0) << endl;
+
+	double receivedPower_db = UAV_TX_pt_db + GAIN_ag_db + loss_dB;
+	double receivedPower = pow(10.0, receivedPower_db / 10.0) / 1000.0;
+	//double receivedPower = UAV_TX_pt * GAIN_ag * pow(10.0, loss_dB/10.0) ;//(10.^((loss_dB)/10)); // received power including path loss,shadowing
+	receivedPower *= chan_value;
+
+	cout << "receivedPower_db: " << receivedPower_db << endl;
+	cout << "receivedPower: " << receivedPower << endl;
+
+	double interference = 0;
+
+	// Calculate Noise Parameters
+	double temperature = 290; // Kelvin
+	double k = 1.3806488 * pow(10.0, -23.0); // Boltzman Constant
+	double bw = 9*1e6; // Efective Bandwidth of channel (9 MHz)
+	double ue_noise_figure = 7 ; // 7 dB noise figure is considered
+	double noise = linear2dBm(k * temperature * bw);
+	double total_noise_dBm = ue_noise_figure + noise;
+	double total_noise = pow(10.0, total_noise_dBm/10.0) / 1000.0;
+
+	cout << "total_noise_dBm: " << total_noise_dBm << endl;
+	cout << "total_noise: " << total_noise << endl;
+
+	double sinr = receivedPower / (interference + total_noise);
+	double sinr_db = linear2dBm(sinr);
+
+	cout << "sinr: " << sinr << endl;
+	cout << "sinr_db: " << sinr_db << endl;
+
+	double sinr_low = -5;
+	double sinr_high = 25;
+	double total_samples = sinr_high - sinr_low;
+
+	double prob = 0;
+	if (sinr_db <= sinr_low) {
+		prob = 0;
+	}
+	else if (sinr_db >= sinr_high) {
+		prob = 1;
+	}
+	else {
+		prob = (sinr_db - sinr_low) / total_samples;
+	}
+
+	cout << "prob: " << prob << endl;
+}
+
 int main(int argc, char **argv) {
 
 	std::list<UAV *> uavsList;
@@ -67,7 +177,7 @@ int main(int argc, char **argv) {
 	int nTasks_tx = 100;
 	int nLt_tx = 1;
 	double timeSlot = 0.001;
-	int supFrame = 1000;
+	//int supFrame = 1000;
 
 	//Communication
 	double commRange = 100;
@@ -77,7 +187,7 @@ int main(int argc, char **argv) {
 
 	//PoI
 	int pkt_interval_npkt = 10;
-	int pkt_interval_slots = 100;
+	int pkt_interval_slots = 1000;
 
 	//CBBA
 	double phase1_interval_sec = 3;
@@ -86,9 +196,10 @@ int main(int argc, char **argv) {
 	double cbba_beacon_interval_var = 0.1;
 
 	//channels
-	int nsc = 10;
-	int nsubf_in_supf = 10;
+	int nsc = 5;
+	int nsubf_in_supf = 1000;
 
+	double singlePoItest_distance = 100;
 
 	InputParser input(argc, argv);
 
@@ -177,16 +288,21 @@ int main(int argc, char **argv) {
 	if (!packetSlots_string.empty()) {
 		pkt_interval_slots = atoi(packetSlots_string.c_str());
 	}
-	const std::string &superFrame_string = input.getCmdOption("-supF");
-	if (!superFrame_string.empty()) {
-		supFrame = atoi(superFrame_string.c_str());
+	//const std::string &superFrame_string = input.getCmdOption("-supF");
+	//if (!superFrame_string.empty()) {
+	//	supFrame = atoi(superFrame_string.c_str());
+	//}
+	const std::string &singlePoIdist_string = input.getCmdOption("-sPoIdist");
+	if (!singlePoIdist_string.empty()) {
+		singlePoItest_distance = atof(singlePoIdist_string.c_str());
 	}
 
 	Generic::getInstance().init(timeSlot);
 	Generic::getInstance().setUAVParam(velocity_ms);
 	Generic::getInstance().setCommParam(commRange, nsc, nsubf_in_supf);
 
-	PoI::generateRandomPoIs(poisList, scenarioSize, nPoI);
+	//PoI::generateRandomPoIs(poisList, scenarioSize, nPoI);
+	PoI::generateSinglePoI(poisList, scenarioSize, singlePoItest_distance, nUAV);
 	for (auto& p : poisList) {
 		p->init(pkt_interval_npkt, pkt_interval_slots);
 	}
@@ -197,13 +313,23 @@ int main(int argc, char **argv) {
 	Generic::getInstance().build_static_comm_task_set(nsc, nsubf_in_supf);
 	nTasks_tx = Generic::getInstance().commTasks.size();
 
-	UAV::generateRandomUAVs(uavsList, poisList, scenarioSize, nUAV, nTasks_mov, nLt_mov, nTasks_tx, nLt_tx);
+	//UAV::generateRandomUAVs(uavsList, poisList, scenarioSize, nUAV, nTasks_mov, nLt_mov, nTasks_tx, nLt_tx);
+	UAV::generateChainUAVs(uavsList, poisList, scenarioSize, nUAV, nTasks_mov, nLt_mov, nTasks_tx, nLt_tx);
 	for (auto& u : uavsList) {
 		u->init(timeSlot, velocity_ms,
 				cbba_beacon_interval_sec, cbba_beacon_interval_var, phase1_interval_sec, phase1_interval_var);
 		u->initTasks(Generic::getInstance().posTasks);
-		u->initComTasks(Generic::getInstance().commTasks);
+		u->initComTasks(Generic::getInstance().commTasks, nsubf_in_supf, nsc);
 	}
+	//exit(0);
+
+	for (int d = 100; d <= 100000; d+=100) {
+		MyCoord rcv(0, d);
+		test(rcv, poisList, nUAV, nTasks_mov, nLt_mov, nTasks_tx, nLt_tx);
+		cout << endl;
+	}
+	//test(MyCoord(0, 4), poisList, nUAV, nTasks_mov, nLt_mov, nTasks_tx, nLt_tx);
+	exit(EXIT_FAILURE);
 
 	CommunicationManager::getInstance().init(uavsList, poisList, commRange, commRange, commRange);
 

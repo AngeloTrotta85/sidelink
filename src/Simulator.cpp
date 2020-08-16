@@ -52,8 +52,8 @@ void Simulator::run() {
 
 		// PHASE 1 - Bundle construction
 		for (auto& u : uavsList) {
-			u->executePhase1_check(simulation_time);
-			//u->executePhase1(simulation_time);
+			//u->executePhase1_check(simulation_time);
+			////u->executePhase1(simulation_time);
 		}
 
 
@@ -88,14 +88,15 @@ void Simulator::run() {
 		for (auto& u : uavsList) {
 			u->comm_data(simulation_time);
 		}
+		CommunicationManager::getInstance().manageTransmissionsTimeSlot(simulation_time);
 
 
 		if (logSF) {cout << "Simulation check 7" << endl; fflush(stdout);}
 
 		//move
-		for (auto& u : uavsList) {
+		//for (auto& u : uavsList) {
 			//u->move(simulation_time);
-		}
+		//}
 
 
 		if (logSF) {cout << "Simulation check 8" << endl; fflush(stdout);}
@@ -114,6 +115,7 @@ void Simulator::run() {
 		//cout << endl;
 		//simulation_time += timeSlot;
 		++simulation_time;
+		if (simulation_time > 1000) exit(0);
 	}
 }
 

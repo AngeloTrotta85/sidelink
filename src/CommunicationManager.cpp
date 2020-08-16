@@ -16,6 +16,7 @@
 #include <map>       // std::list
 
 #include "CommunicationManager.h"
+#include "RandomGenerator.h"
 
 using namespace std;
 
@@ -207,9 +208,9 @@ void CommunicationManager::update(int tk) {
 				" > " <<
 				endl;
 	}
-	cout << endl;
-	exit (EXIT_SUCCESS);
-	*/
+	cout << endl;*/
+	//exit (EXIT_SUCCESS);
+
 
 	updateLt();
 
@@ -286,5 +287,59 @@ bool CommunicationManager::isDirect (int idu) {
 double CommunicationManager::getRSSIhistory(int sub_frame, int sub_channel) {
 	return (rand() % 10);
 }
+
+void CommunicationManager::sendDataRB(UAV *u, Packet *p, int timek, int channel) {
+
+	pktToSend_t newp;
+	newp.u = u;
+	newp.p = p;
+	newp.tk = timek;
+	newp.sub_ch = channel;
+
+	if (packetToSend.count(channel) == 0) {
+		packetToSend[channel] = std::list<pktToSend_t>();
+	}
+	packetToSend[channel].push_back(newp);
+}
+
+void CommunicationManager::manageTransmissionsTimeSlot(int timek) {
+	for (auto& el : packetToSend) {
+		int channel = el.first;
+		for (auto& p : el.second) {
+			Packet *pkt = p.p;
+			UAV *u = p.u;
+			//int sc = p.sub_ch;
+			double rssi = 0;
+			bool okTx = checkTxSD(pkt->id, el.second, rssi);
+			u->updateRssi(timek, channel, rssi);
+
+			if (okTx) {
+				for (auto& e : connGraph) {
+					if ((e.first.uav == u->id) && (e.second.t == UAV_T)) {
+						UAV *destUav = uavList[e.second.uav];
+						destUav->rcvPacketFromUAV(pkt, timek);
+
+						break;
+					}
+				}
+
+			}
+		}
+	}
+
+	//clear
+	for (auto& l : packetToSend) {
+		l.second.clear();
+	}
+	packetToSend.clear();
+}
+
+bool CommunicationManager::checkTxSD (int pktID, std::list<pktToSend_t> &allPkst, double &rssi) {
+	rssi = RandomGenerator::getInstance().getRealUniform(-100, -60);
+	return true;
+}
+
+
+
 
 

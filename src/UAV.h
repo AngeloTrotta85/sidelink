@@ -34,6 +34,7 @@ public:
 
 	void log_cout(int tk);
 
+	static void generateChainUAVs(std::list<UAV *> &pl, std::list<PoI *> &poiList, int ss, int nu, int movNt, int movLt, int txNt, int txLt);
 	static void generateRandomUAVs(std::list<UAV *> &pl, std::list<PoI *> &poiList, int ss, int nu, int movNt, int movLt, int txNt, int txLt);
 
 	void executePhase1_check(int tk);
@@ -60,11 +61,15 @@ public:
 
 	double calcTxReward(std::list<int> &p_vec);
 	double calcTxIncreaseReward(std::list<int> &p_vec, int n, int j);
+	double calcTxIncreaseReward(double without, std::list<int> &p_vec, int n, int j);
 	double update_calcTxIncreaseReward(std::list<int> &p_vec, int j);
+	double calcTxIncreaseReward_opt(int j);
+
+	double calcSingleTxReward(double xframe, double ychannel);
 
 	void init(double ts, double velMS, double cbbaMSGsec, double cbbaMSGvar, double phase1MSGsec, double phase1MSGvar);
 	void initTasks(std::map<int, MyCoord> &tm);
-	void initComTasks(std::map<int, MyCoord> &tm);
+	void initComTasks(std::map<int, MyCoord> &tm, int x_frame, int y_channel);
 	void buildTaskMap(void);
 
 	void move(int tk);
@@ -73,8 +78,12 @@ public:
 	void comm_data(int tk);
 	void comm_directBS(int tk);
 	void comm_multihop(int tk);
+	void checkBookForNow (std::list<int> &bc, int tkmod);
 
 	void rcvPacketFromPoI(Packet *p, int tk);
+	void rcvPacketFromUAV(Packet *p, int tk);
+
+	void updateRssi(int tk, int channel, double rssi);
 
 private:
 	void initVars(MyCoord recCoord, std::list<PoI *> &poiList, int nu, int movNt, int movLt, int txNt, int txLt);
@@ -103,6 +112,8 @@ public:
 	int id;
 	static int idUAVGen;
 
+	int logUAV;
+
 	std::vector<double> mov_y_vec;
 	std::vector<int> mov_z_vec;
 	std::list<int> mov_b_vec;
@@ -125,6 +136,7 @@ public:
 
 	std::list <pktInfo_t> pktQueue;
 
+	std::vector< std::vector <double> > rssiRCV;
 
 	// used by CommunicationManager for tree building
 	UAV *father;

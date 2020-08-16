@@ -12,6 +12,7 @@
 #include <list>       // std::list
 #include <map>       // std::list
 
+#include "RandomGenerator.h"
 #include "UAV.h"
 
 class Radio {
@@ -39,6 +40,21 @@ public:
 	//       due to the compilers behavior to check accessibility
 	//       before deleted status
 
+public:
+	static double linear2dBm(double x) {
+		return (10.0 * log10(x * 1000.0));
+	}
+
+	static double getUAVChannelLoss (double freq, double tx_height, double rx_height, double dist) {
+		double C = 0;
+		double temp = rx_height * (1.1 * log10(freq) - 0.7) - (1.56 * log10(freq) - 0.8);
+		double sigma = 8; // Standard Deviation for Shadowing Effect
+
+		double path_loss = 46.3 + 33.9 * log10(freq) - 13.82 * log10(tx_height) - temp + log10(dist/1000.0)*(44.9 - 6.55 * log10(tx_height))+C;
+		double channel_loss = -path_loss + (-1 * sigma * RandomGenerator::getInstance().getRealNormal(0, 1));
+
+		return channel_loss;
+	}
 
 public:
 	void registerUAV(UAV *u);

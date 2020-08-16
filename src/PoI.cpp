@@ -38,6 +38,15 @@ PoI::PoI(MyCoord posCoord, int id_new) {
 	next_packet_generation_tk = 0;
 }
 
+void PoI::generateSinglePoI(std::list<PoI *> &pl, int ss, int dist, int nu) {
+
+	MyCoord poipos = MyCoord(0, dist * (nu + 1));
+
+	PoI *newP = new PoI(poipos);
+	pl.push_back(newP);
+
+	std::cout << "PoI --> " << newP->actual_coord << std::endl;
+}
 
 void PoI::generateRandomPoIs(std::list<PoI *> &pl, int ss, int np) {
 	//for (int i : boost::irange(0, nu)) { // i goes from 0 to nu-1
@@ -47,7 +56,7 @@ void PoI::generateRandomPoIs(std::list<PoI *> &pl, int ss, int np) {
 		//);
 
 		int rndtry = 100;
-		double distance = 0;
+		//double distance = 0;
 		MyCoord poipos = MyCoord::ZERO;
 		while ((rndtry > 0) && (poipos.length() < Generic::getInstance().commRange)) {
 			double intrange = ((double) ss) / 1.0;
@@ -69,7 +78,8 @@ void PoI::generateRandomPoIs(std::list<PoI *> &pl, int ss, int np) {
 
 
 void PoI::init(int npkt, int slots) {
-	next_packet_generation_tk = RandomGenerator::getInstance().getIntUniform(0, 1000);
+	//next_packet_generation_tk = RandomGenerator::getInstance().getIntUniform(0, 1000);
+	next_packet_generation_tk = 0;
 
 	nPacket2Generate = npkt;
 	generationIntervalSlots = slots;

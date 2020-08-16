@@ -64,6 +64,13 @@ public:
 		int poi = -1;
 	} node_t;
 
+	typedef struct pktToSend {
+		Packet *p;
+		UAV *u;
+		int tk;
+		int sub_ch;
+	} pktToSend_t;
+
 public:
 	void init(std::list<UAV *> &ul, std::list<PoI *> &pl, double cuu, double cpu, double cub);
 	void sendPacketFromPoI(Packet *p, int tk);
@@ -78,6 +85,11 @@ public:
 
 	double getRSSIhistory(int sub_frame, int sub_channel);
 
+	void sendDataRB(UAV *u, Packet *p, int timek, int channel);
+	void manageTransmissionsTimeSlot(int timek);
+
+	bool checkTxSD (int pktID, std::list<pktToSend_t> &allPkst, double &rssi);
+
 public:
 	UAV *specialUAV_BS;
 	std::map<int, UAV *> uavList;
@@ -86,6 +98,8 @@ public:
 	std::map<int, PoI *> poiList;
 
 	std::list<std::pair <node_t, node_t> > connGraph;
+
+	std::map<int, std::list<pktToSend_t> > packetToSend;
 
 	double commRange_u2u;
 	double commRange_p2u;

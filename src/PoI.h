@@ -18,6 +18,7 @@ public:
 	PoI(MyCoord posCoord, int id_new);
 
 public:
+	static void generateSinglePoI(std::list<PoI *> &pl, int ss, int dist, int nu);
 	static void generateRandomPoIs(std::list<PoI *> &pl, int ss, int np);
 
 	void init(int npkt, int slots);
