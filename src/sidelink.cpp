@@ -22,6 +22,8 @@
 
 #include <complex>      // std::complex, std::real
 
+#include <boost/algorithm/string.hpp>
+
 #include "CommunicationManager.h"
 #include "RandomGenerator.h"
 #include "Simulator.h"
@@ -171,10 +173,12 @@ int main(int argc, char **argv) {
 	std::list<UAV *> uavsList;
 	std::list<PoI *> poisList;
 
+	string configFile = "";
+
 	int time_N = 1 * 60 * 60 * 1000;
 	int scenarioSize = 1000;
 	int nUAV = 4;
-	int nPoI = 1;
+	//int nPoI = 1;
 	int nTasks_mov = 4;
 	int nLt_mov = 1;
 	int nTasks_tx = 100;
@@ -216,6 +220,10 @@ int main(int argc, char **argv) {
 		unsigned seedR = std::chrono::system_clock::now().time_since_epoch().count();
 		RandomGenerator::getInstance().setSeed(seedR);
 	}
+	const std::string &conf_String = input.getCmdOption("-conf");
+	if (!conf_String.empty()) {
+		configFile = conf_String;
+	}
 	const std::string &inputTimeSim = input.getCmdOption("-time");
 	if (!inputTimeSim.empty()) {
 		time_N = atoi(inputTimeSim.c_str());
@@ -224,10 +232,10 @@ int main(int argc, char **argv) {
 	if (!inputNumUAV.empty()) {
 		nUAV = atoi(inputNumUAV.c_str());
 	}
-	const std::string &inputNumPoI = input.getCmdOption("-np");
-	if (!inputNumPoI.empty()) {
-		nPoI = atoi(inputNumPoI.c_str());
-	}
+	//const std::string &inputNumPoI = input.getCmdOption("-np");
+	//if (!inputNumPoI.empty()) {
+	//	nPoI = atoi(inputNumPoI.c_str());
+	//}
 	const std::string &inputNumTasksM = input.getCmdOption("-ntM");
 	if (!inputNumTasksM.empty()) {
 		nTasks_mov = atoi(inputNumTasksM.c_str());
@@ -309,25 +317,212 @@ int main(int argc, char **argv) {
 	Generic::getInstance().setUAVParam(velocity_ms);
 	Generic::getInstance().setCommParam(commRange, nsc, nsubf_in_supf, pkt_interval_npkt, singlePoItest_distance);
 
-	//PoI::generateRandomPoIs(poisList, scenarioSize, nPoI);
-	PoI::generateSinglePoI(poisList, scenarioSize, singlePoItest_distance, nUAV);
-	for (auto& p : poisList) {
-		p->init(pkt_interval_npkt, pkt_interval_slots);
+	if (configFile.length() > 0) {
+		ifstream infile_pos;
+		infile_pos.open (configFile, std::ifstream::in);
+		if (infile_pos.is_open()){
+			bool continue_read = true;
+			std::string line;
+
+			//cout << "FILE " << fin_pos << endl;
+
+			while ( (std::getline(infile_pos, line)) && (continue_read) ) {
+				std::string delimiter_field = ";";
+				std::string delimiter_eq = ":";
+
+				cout << "Line: " << line << endl;fflush(stdout);
+
+				bool isUAVdef = false;
+				bool isPOIdef = false;
+
+				//if (line.rfind("U:", 0) != 0) {
+				if (line.find("U:") != std::string::npos) {
+					if (line.find("x") != std::string::npos) {
+						isUAVdef = true; // found
+					}
+					else if (line.find("POI:") != std::string::npos) {
+						isPOIdef = true; // found
+					}
+					else {
+						break;
+					}
+				}
+
+				cout << "isUAVdef " << isUAVdef << endl;fflush(stdout);
+				cout << "isPOIdef " << isPOIdef << endl;fflush(stdout);
+
+				vector<string> strs;
+				boost::split(strs, line, boost::is_any_of(";"));
+
+				//int uavIdx = -1;
+				UAV *newUAV = nullptr;
+				PoI *newPOI = nullptr;
+
+				for (auto& var : strs) {
+					//cout << var << endl;
+
+					vector<string> strs_var;
+					boost::split(strs_var, var, boost::is_any_of(":"));
+
+					//for (auto& el : strs_var) {
+					//	cout << el << endl;
+					//}
+
+					if (strs_var.size() == 2) {
+						if (strs_var[0].compare("U") == 0) {
+							//uavIdx = stoi(strs_var[1]);
+							//uavPos[uavIdx] = MyCoord::ZERO;
+							if (isUAVdef) {
+								newUAV = new UAV(stoi(strs_var[1]));
+							}
+							else {
+								// in POI def
+								if (isPOIdef) {
+									//cout << "For PoI" << newPOI->id << " looking for UAV" << strs_var[1] << endl;
+									for (auto& uu : uavsList) {
+										if (uu->id == stoi(strs_var[1])) {
+											newPOI->actual_coord = uu->actual_coord;
+											break;
+										}
+									}
+									if (newPOI->actual_coord == MyCoord::ZERO) {
+										cerr << "PoI should be positioned" << endl;
+									}
+								}
+								else {
+									cerr << "PoI should be defined" << endl;
+								}
+							}
+						}
+						else if (strs_var[0].compare("x") == 0) {
+							//uavPos[uavIdx].x = stod(strs_var[1]);
+							if (isUAVdef) {
+								newUAV->actual_coord.x = stod(strs_var[1]);
+							}
+						}
+						else if (strs_var[0].compare("y") == 0) {
+							//uavPos[uavIdx].y = stod(strs_var[1]);
+							if (isUAVdef) {
+								newUAV->actual_coord.y = stod(strs_var[1]);
+							}
+						}
+						else if (strs_var[0].compare("POI") == 0) {
+							if (isPOIdef) {
+								newPOI = new PoI(stoi(strs_var[1]));
+							}
+						}
+						else if (strs_var[0].compare("BS") == 0) {
+							break;
+						}
+						else if (strs_var[0].compare("NC") == 0) {
+							nsc = stoi(strs_var[1]);
+						}
+						else if (strs_var[0].compare("DR") == 0) {
+							for (auto& pp : poisList) {
+								pp->init(stoi(strs_var[1]));
+							}
+						}
+						else if (strs_var[0].compare("DB") == 0) {
+							//signalLimits->distMaxBS = stod(strs_var[1]);
+						}
+						else if (strs_var[0].compare("DI") == 0) {
+							//signalLimits->distMaxInterf = stod(strs_var[1]);
+						}
+						else if (strs_var[0].compare("DM") == 0) {
+							//signalLimits->distMaxUAV = stod(strs_var[1]);
+							commRange = stod(strs_var[1]);
+
+							//continue_read = false;
+						}
+						else if (strs_var[0].compare("K1SNR") == 0) {
+							//signalLimits->k1snr = stod(strs_var[1]);
+						}
+						else if (strs_var[0].compare("K2SNR") == 0) {
+							//signalLimits->k2snr = stod(strs_var[1]);
+						}
+						else if (strs_var[0].compare("L1SNR") == 0) {
+							//signalLimits->l1snr = stod(strs_var[1]);
+						}
+						else if (strs_var[0].compare("L2SNR") == 0) {
+							//signalLimits->l2snr = stod(strs_var[1]);
+						}
+						else if (strs_var[0].compare("K1SINR") == 0) {
+							//signalLimits->k1sinr = stod(strs_var[1]);
+						}
+						else if (strs_var[0].compare("K2SINR") == 0) {
+							//signalLimits->k2sinr = stod(strs_var[1]);
+						}
+						else if (strs_var[0].compare("L1SINR") == 0) {
+							//signalLimits->l1sinr = stod(strs_var[1]);
+						}
+						else if (strs_var[0].compare("L2SINR") == 0) {
+							//signalLimits->l2sinr = stod(strs_var[1]);
+						}
+					}
+				}
+
+				if (newUAV != nullptr) {
+					uavsList.push_back(newUAV);
+				}
+				if (newPOI != nullptr) {
+					poisList.push_back(newPOI);
+				}
+			}
+
+			Generic::getInstance().build_static_positions_task_set(poisList);
+			nTasks_mov = Generic::getInstance().posTasks.size();
+
+			Generic::getInstance().build_static_comm_task_set(nsc, nsubf_in_supf);
+			nTasks_tx = Generic::getInstance().commTasks.size();
+
+			for (auto& u : uavsList) {
+				/*for (auto& pp : poisList) {
+					u->poisList.push_back(pp);
+				}*/
+
+				u->initVars(u->actual_coord, poisList, uavsList.size(), nTasks_mov, nLt_mov, nTasks_tx, nLt_tx);
+			}
+			for (auto& u : uavsList) {
+				u->init(timeSlot, velocity_ms,
+						cbba_beacon_interval_sec, cbba_beacon_interval_var, phase1_interval_sec, phase1_interval_var);
+				u->initTasks(Generic::getInstance().posTasks);
+				u->initComTasks(Generic::getInstance().commTasks, nsubf_in_supf, nsc, max_queue);
+			}
+
+			for (auto& u : uavsList) {
+				cout << "UAV" << u->id << " at pos: " << u->actual_coord << endl;
+			}
+			for (auto& p : poisList) {
+				cout << "POI" << p->id << " at pos: " << p->actual_coord << endl;
+			}
+
+			//UAV *newU = new UAV(uavPos, poiList, nu, movNt, movLt, txNt, txLt);
+
+			infile_pos.close();
+		}
 	}
+	else {
+		//PoI::generateRandomPoIs(poisList, scenarioSize, nPoI);
+		PoI::generateSinglePoI(poisList, scenarioSize, singlePoItest_distance, nUAV);
+		for (auto& p : poisList) {
+			p->init(pkt_interval_npkt, pkt_interval_slots);
+		}
 
-	Generic::getInstance().build_static_positions_task_set(poisList);
-	nTasks_mov = Generic::getInstance().posTasks.size();
+		Generic::getInstance().build_static_positions_task_set(poisList);
+		nTasks_mov = Generic::getInstance().posTasks.size();
 
-	Generic::getInstance().build_static_comm_task_set(nsc, nsubf_in_supf);
-	nTasks_tx = Generic::getInstance().commTasks.size();
+		Generic::getInstance().build_static_comm_task_set(nsc, nsubf_in_supf);
+		nTasks_tx = Generic::getInstance().commTasks.size();
 
-	//UAV::generateRandomUAVs(uavsList, poisList, scenarioSize, nUAV, nTasks_mov, nLt_mov, nTasks_tx, nLt_tx);
-	UAV::generateChainUAVs(uavsList, poisList, scenarioSize, nUAV, nTasks_mov, nLt_mov, nTasks_tx, nLt_tx);
-	for (auto& u : uavsList) {
-		u->init(timeSlot, velocity_ms,
-				cbba_beacon_interval_sec, cbba_beacon_interval_var, phase1_interval_sec, phase1_interval_var);
-		u->initTasks(Generic::getInstance().posTasks);
-		u->initComTasks(Generic::getInstance().commTasks, nsubf_in_supf, nsc, max_queue);
+		//UAV::generateRandomUAVs(uavsList, poisList, scenarioSize, nUAV, nTasks_mov, nLt_mov, nTasks_tx, nLt_tx);
+		UAV::generateChainUAVs(uavsList, poisList, scenarioSize, nUAV, nTasks_mov, nLt_mov, nTasks_tx, nLt_tx);
+		for (auto& u : uavsList) {
+			u->init(timeSlot, velocity_ms,
+					cbba_beacon_interval_sec, cbba_beacon_interval_var, phase1_interval_sec, phase1_interval_var);
+			u->initTasks(Generic::getInstance().posTasks);
+			u->initComTasks(Generic::getInstance().commTasks, nsubf_in_supf, nsc, max_queue);
+		}
+
 	}
 	//exit(0);
 

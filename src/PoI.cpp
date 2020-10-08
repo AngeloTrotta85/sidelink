@@ -38,6 +38,17 @@ PoI::PoI(MyCoord posCoord, int id_new) {
 	next_packet_generation_tk = 0;
 }
 
+PoI::PoI(int id_new) {
+	actual_coord = MyCoord::ZERO;
+	id = id_new;
+
+	father = nullptr;
+	packetPerSecond = 100;
+	nPacket2Generate = 10;
+	generationIntervalSlots = 100;
+	next_packet_generation_tk = 0;
+}
+
 void PoI::generateSinglePoI(std::list<PoI *> &pl, int ss, int dist, int nu) {
 
 	MyCoord poipos = MyCoord(0, dist * (nu + 1));
@@ -85,6 +96,20 @@ void PoI::init(int npkt, int slots) {
 	generationIntervalSlots = slots;
 
 	packetPerSecond = nPacket2Generate * (1000 / generationIntervalSlots);
+}
+
+void PoI::init(int npktpersecond) {
+	next_packet_generation_tk = 0;
+
+	packetPerSecond = npktpersecond;
+
+	nPacket2Generate = 1;
+	if (packetPerSecond > 1000) {
+		generationIntervalSlots = 1;
+	}
+	else {
+		generationIntervalSlots = round(1000.0 / ((double)packetPerSecond));
+	}
 }
 
 void PoI::generatePackets_check(int tk) {

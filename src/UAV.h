@@ -26,6 +26,7 @@ public:
 	} pktInfo_t;
 
 public:
+	UAV(int newid);
 	UAV(MyCoord recCoord);
 	UAV(MyCoord recCoord, std::list<PoI *> &poiList, int nu, int movNt, int movLt, int txNt, int txLt);
 	UAV(MyCoord recCoord, std::list<PoI *> &poiList, int nu, int movNt, int movLt, int txNt, int txLt, int id_new);
@@ -85,7 +86,7 @@ public:
 
 	void updateRssi(int tk, int channel, double rssi);
 
-private:
+//private:
 	void initVars(MyCoord recCoord, std::list<PoI *> &poiList, int nu, int movNt, int movLt, int txNt, int txLt);
 
 public:

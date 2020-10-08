@@ -14,6 +14,7 @@ class UAV;
 
 class PoI {
 public:
+	PoI(int id_new);
 	PoI(MyCoord posCoord);
 	PoI(MyCoord posCoord, int id_new);
 
@@ -22,6 +23,7 @@ public:
 	static void generateRandomPoIs(std::list<PoI *> &pl, int ss, int np);
 
 	void init(int npkt, int slots);
+	void init(int npktpersecond);
 
 	void generatePackets_check(int tk);
 	void generatePackets(int tk);

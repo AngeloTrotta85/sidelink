@@ -35,6 +35,10 @@ UAV::UAV(MyCoord recCoord, std::list<PoI *> &poiList, int nu, int movNt, int mov
 	id = id_new;
 }
 
+UAV::UAV(int newid) {
+	id = newid;
+}
+
 void UAV::initVars(MyCoord recCoord, std::list<PoI *> &poiList, int nu, int movNt, int movLt, int txNt, int txLt) {
 	actual_coord = recCoord;
 
