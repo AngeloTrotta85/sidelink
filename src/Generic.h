@@ -14,7 +14,25 @@
 #include "UAV.h"
 #include "MyCoord.h"
 
+
 class PoI;
+
+class SinrLimits {
+public:
+	double k1snr;
+	double k2snr;
+	double l1snr;
+	double l2snr;
+
+	double k1sinr;
+	double k2sinr;
+	double l1sinr;
+	double l2sinr;
+
+	double distMaxUAV;
+	double distMaxInterf;
+	double distMaxBS;
+};
 
 class Generic {
 public:
@@ -29,6 +47,8 @@ private:
 		timeSlot = 1;
 		maxVelocity = 3;
 		commRange = 100;
+
+		signalLim = nullptr;
 	};         // Constructor? (the {} brackets) are needed here.
 
 	// C++ 11
@@ -63,6 +83,11 @@ public:
 		uavDist= singlePoItest_distance;
 	}
 
+	void setMiscParam(std::string traceString);
+	void setLimitsParam(SinrLimits *sl) {
+		signalLim = sl;
+	}
+
 	double getTime2Travel(MyCoord start, MyCoord end);
 
 	void build_static_positions_task_set(std::list<PoI *> &poisList);
@@ -78,6 +103,10 @@ public:
 	int superFrame;
 	int pktLoad;
 	double uavDist;
+
+	SinrLimits *signalLim;
+
+	std::string traceOutString;
 
 	std::map<int, MyCoord> posTasks;
 	std::map<int, MyCoord> commTasks;

@@ -30,7 +30,7 @@ void Simulator::run() {
 	timeSlot = Generic::getInstance().timeSlot;
 	endSimulation = false;
 	int logTime = 1000*2;
-	bool logSF = true;
+	bool logSF = false;
 
 	while (((end_time < 0) || (simulation_time <= end_time)) && (!endSimulation)) {
 

@@ -19,6 +19,7 @@
 #include <complex>      // std::complex, std::real
 
 #include "CommunicationManager.h"
+#include "Generic.h"
 #include "RandomGenerator.h"
 
 using namespace std;
@@ -310,6 +311,8 @@ void CommunicationManager::sendPacketFromPoI(Packet *p, int tk) {
 
 	if (destUAV != nullptr) {
 		destUAV->rcvPacketFromPoI(p, tk);
+
+		cout << "PK:" << p->sourcePoI << ":" << tk << " - Packet generated at PoI" << p->sourcePoI << " at time slot " << tk << " is passed to UAV" << destUAV->id << endl;
 	}
 	else {
 		// packet not generated because no one is covering
@@ -338,6 +341,7 @@ void CommunicationManager::sendDataRB(UAV *u, Packet *p, int timek, int channel)
 
 	pktToSend_t newp;
 	newp.u = u;
+	newp.u_dest = nullptr;
 	newp.p = p;
 	newp.tk = timek;
 	newp.sub_ch = channel;
@@ -355,11 +359,37 @@ void CommunicationManager::manageTransmissionsTimeSlot(int timek) {
 	for (auto& el : packetToSend) {
 		int channel = el.first;
 		std::map<int, double> uav_interference_Map;
+		std::map<int, double> packet_rss_rcv; //TODO
 
 		if (logSF) {cout << "CommunicationManager::manageTransmissionsTimeSlot 1" << endl; fflush(stdout);}
 
-		//calculate the interference RSSI for each UAV
+		//find the destination of each packet
+		for (auto& p : el.second) {
+			//Packet *pkt = p.p;
+			UAV *u_src = p.u;
+
+			p.u_dest = nullptr;
+			for (auto& e : connGraph) {
+				if ((e.first.uav == u_src->id) && (e.second.t == UAV_T)) {
+					p.u_dest = uavList[e.second.uav];
+					break;
+				}
+			}
+		}
+
+		if (logSF) {cout << "CommunicationManager::manageTransmissionsTimeSlot 1.1" << endl; fflush(stdout);}
+
+		//calculate the interference map
 		for (auto& u_rcv : uavList){
+			uav_interference_Map[u_rcv.second->id] = 0;
+			for (auto& p : el.second) {
+				if ( (p.u_dest != nullptr) && (p.u_dest->id != u_rcv.second->id) ) {
+					uav_interference_Map[u_rcv.second->id] += calcReceivedPower(p.u->actual_coord.distance(u_rcv.second->actual_coord));
+				}
+			}
+		}
+		//calculate the interference RSSI for each UAV
+		/*for (auto& u_rcv : uavList){
 			double sumInterf = 0;
 			for (auto& p : el.second) {
 				if (p.u->id != u_rcv.second->id) {
@@ -367,7 +397,7 @@ void CommunicationManager::manageTransmissionsTimeSlot(int timek) {
 				}
 			}
 			uav_interference_Map[u_rcv.second->id] = 0;
-		}
+		}*/
 
 		if (logSF) {cout << "CommunicationManager::manageTransmissionsTimeSlot 2" << endl; fflush(stdout);}
 
@@ -376,6 +406,52 @@ void CommunicationManager::manageTransmissionsTimeSlot(int timek) {
 			sunMultipleTx += el.second.size();
 		}
 
+		for (auto& p : el.second) {
+			Packet *pkt = p.p;
+			UAV *u_src = p.u;
+			if (p.u_dest != nullptr) {
+				UAV *u_dst = p.u_dest;
+
+				std::cout << "PK:" << pkt->sourcePoI << ":" << pkt->genTime << " - UAV" << u_src->id << " try to send to UAV" << u_dst->id << " at time slot " << timek << std::endl;
+
+				bool okTx = checkTxSD(p, el.second, u_dst, uav_interference_Map);
+				//u_src->updateRssi(timek, channel, rssi);
+
+				ofstream f_out(Generic::getInstance().traceOutString, std::ofstream::out | std::ofstream::app);
+				if (f_out.is_open()) {
+					f_out <<
+							"U:" << u_src->id << ";" <<
+							"U:" << u_dst->id << ";" <<
+							"TS:" << timek << ";" <<
+							"CH:" << channel << ";" <<
+							"POI:" << pkt->sourcePoI << ";" <<
+							"TX:" << pkt->genTime <<
+							std::endl;
+
+					f_out.close();
+				}
+
+				if (okTx) {
+					std::cout << "PK:" << pkt->sourcePoI << ":" << pkt->genTime << " - UAV" << u_src->id << " try to send to UAV" << u_dst->id << " at time slot " << timek << " - OK!" << std::endl;
+					u_dst->rcvPacketFromUAV(pkt, timek);
+				}
+				else {
+					std::cout << "PK:" << pkt->sourcePoI << ":" << pkt->genTime << " - UAV" << u_src->id << " try to send to UAV" << u_dst->id << " at time slot " << timek << " - FAILURE!" << std::endl;
+					// drop packet not arrived
+					packetDropped(pkt);
+					delete (pkt);
+				}
+
+			}
+			else {
+				std::cout << "PK:" << pkt->sourcePoI << ":" << pkt->genTime << " - UAV" << u_src->id << " is not connected at time slot " << timek << " - FAILURE!" << std::endl;
+				// drop, no connection
+				packetDropped(pkt);
+				delete (pkt);
+			}
+		}
+
+		/*
 		for (auto& p : el.second) {
 			Packet *pkt = p.p;
 			UAV *u_src = p.u;
@@ -390,25 +466,49 @@ void CommunicationManager::manageTransmissionsTimeSlot(int timek) {
 				}
 			}
 			if (u_dst != nullptr) {
+
+				p.u_dest = u_dst;
+
+				std::cout << "PK:" << pkt->sourcePoI << ":" << pkt->genTime << " - UAV" << u_src->id << " try to send to UAV" << u_dst->id << " at time slot " << timek << std::endl;
+
 				bool okTx = checkTxSD(p, el.second, u_dst, uav_interference_Map);
 				//u_src->updateRssi(timek, channel, rssi);
 
+				ofstream f_out(Generic::getInstance().traceOutString, std::ofstream::out | std::ofstream::app);
+				if (f_out.is_open()) {
+					f_out <<
+							"U:" << u_src->id << ";" <<
+							"U:" << u_dst->id << ";" <<
+							"TS:" << timek << ";" <<
+							"CH:" << channel << ";" <<
+							"POI:" << pkt->sourcePoI << ";" <<
+							"TX:" << pkt->genTime <<
+							std::endl;
+
+					f_out.close();
+				}
+
 				if (okTx) {
+					std::cout << "PK:" << pkt->sourcePoI << ":" << pkt->genTime << " - UAV" << u_src->id << " try to send to UAV" << u_dst->id << " at time slot " << timek << " - OK!" << std::endl;
 					u_dst->rcvPacketFromUAV(pkt, timek);
 				}
 				else {
+					std::cout << "PK:" << pkt->sourcePoI << ":" << pkt->genTime << " - UAV" << u_src->id << " try to send to UAV" << u_dst->id << " at time slot " << timek << " - FAILURE!" << std::endl;
 					// drop packet not arrived
 					packetDropped(pkt);
 					delete (pkt);
 				}
 			}
 			else {
+
+				std::cout << "PK:" << pkt->sourcePoI << ":" << pkt->genTime << " - UAV" << u_src->id << " is not connected at time slot " << timek << " - FAILURE!" << std::endl;
 				// drop, no connection
 				packetDropped(pkt);
 				delete (pkt);
 			}
 
 		}
+		*/
 
 		if (logSF) {cout << "CommunicationManager::manageTransmissionsTimeSlot 3" << endl; fflush(stdout);}
 
@@ -438,14 +538,15 @@ double CommunicationManager::linear2dBm(double x) {
 double CommunicationManager::getUAVChannelLoss (double freq, double tx_height, double rx_height, double dist) {
 	//double C = 0;
 	//double temp = rx_height * (1.1 * log10(freq) - 0.7) - (1.56 * log10(freq) - 0.8);
-	double sigma = 8; // Standard Deviation for Shadowing Effect
+	//double sigma = 8; // Standard Deviation for Shadowing Effect
 
-	//double path_loss = 41.1 + 20.9 * log10(dist);
+	double path_loss = 41.1 + 20.9 * log10(dist);
 	//double path_loss = 41.1 + 41.8 * log10(dist);
-	double path_loss = 41.1 + 41.8 * log10(dist);
+	//double path_loss = 41.1 + 41.8 * log10(dist);
 
 	//double path_loss = 46.3 + 33.9 * log10(freq) - 13.82 * log10(tx_height) - temp + log10(dist/1000.0)*(44.9 - 6.55 * log10(tx_height))+C;
-	double channel_loss = -path_loss + (-1 * sigma * RandomGenerator::getInstance().getRealNormal(0, 1));
+	//double channel_loss = -path_loss + (-1 * sigma * RandomGenerator::getInstance().getRealNormal(0, 1));
+	double channel_loss = -path_loss;
 
 	return channel_loss;
 }
@@ -459,7 +560,7 @@ double CommunicationManager::calcReceivedPower (double distance) {
 	//UAV *u_src = pkt.u;
 
 	//double UAV_TX_pt = 0.2512; //%%%% 0.2512 Watt = 24 dBm; % All UAVs transmit with same Power (24 dBm)
-	double UAV_TX_pt_db = 24;
+	double UAV_TX_pt_db = 23;
 	//double GAIN_ag = pow(10.0, 0.6);  //% Transmiter Antenna Gain (6 dB)
 	double GAIN_ag_db = 6;
 	double freq = 3410;

@@ -174,6 +174,7 @@ int main(int argc, char **argv) {
 	std::list<PoI *> poisList;
 
 	string configFile = "";
+	string traceFile = "";
 
 	int time_N = 1 * 60 * 60 * 1000;
 	int scenarioSize = 1000;
@@ -188,6 +189,7 @@ int main(int argc, char **argv) {
 
 	//Communication
 	double commRange = 100;
+	SinrLimits *signalLimits = new SinrLimits();
 
 	//UAV
 	double velocity_ms = 10;
@@ -223,6 +225,10 @@ int main(int argc, char **argv) {
 	const std::string &conf_String = input.getCmdOption("-conf");
 	if (!conf_String.empty()) {
 		configFile = conf_String;
+	}
+	const std::string &trace_String = input.getCmdOption("-trace");
+	if (!trace_String.empty()) {
+		traceFile = trace_String;
 	}
 	const std::string &inputTimeSim = input.getCmdOption("-time");
 	if (!inputTimeSim.empty()) {
@@ -316,6 +322,7 @@ int main(int argc, char **argv) {
 	Generic::getInstance().init(timeSlot);
 	Generic::getInstance().setUAVParam(velocity_ms);
 	Generic::getInstance().setCommParam(commRange, nsc, nsubf_in_supf, pkt_interval_npkt, singlePoItest_distance);
+	Generic::getInstance().setMiscParam(traceFile);
 
 	if (configFile.length() > 0) {
 		ifstream infile_pos;
@@ -423,40 +430,40 @@ int main(int argc, char **argv) {
 							}
 						}
 						else if (strs_var[0].compare("DB") == 0) {
-							//signalLimits->distMaxBS = stod(strs_var[1]);
+							signalLimits->distMaxBS = stod(strs_var[1]);
 						}
 						else if (strs_var[0].compare("DI") == 0) {
-							//signalLimits->distMaxInterf = stod(strs_var[1]);
+							signalLimits->distMaxInterf = stod(strs_var[1]);
 						}
 						else if (strs_var[0].compare("DM") == 0) {
-							//signalLimits->distMaxUAV = stod(strs_var[1]);
+							signalLimits->distMaxUAV = stod(strs_var[1]);
 							commRange = stod(strs_var[1]);
 
 							//continue_read = false;
 						}
 						else if (strs_var[0].compare("K1SNR") == 0) {
-							//signalLimits->k1snr = stod(strs_var[1]);
+							signalLimits->k1snr = stod(strs_var[1]);
 						}
 						else if (strs_var[0].compare("K2SNR") == 0) {
-							//signalLimits->k2snr = stod(strs_var[1]);
+							signalLimits->k2snr = stod(strs_var[1]);
 						}
 						else if (strs_var[0].compare("L1SNR") == 0) {
-							//signalLimits->l1snr = stod(strs_var[1]);
+							signalLimits->l1snr = stod(strs_var[1]);
 						}
 						else if (strs_var[0].compare("L2SNR") == 0) {
-							//signalLimits->l2snr = stod(strs_var[1]);
+							signalLimits->l2snr = stod(strs_var[1]);
 						}
 						else if (strs_var[0].compare("K1SINR") == 0) {
-							//signalLimits->k1sinr = stod(strs_var[1]);
+							signalLimits->k1sinr = stod(strs_var[1]);
 						}
 						else if (strs_var[0].compare("K2SINR") == 0) {
-							//signalLimits->k2sinr = stod(strs_var[1]);
+							signalLimits->k2sinr = stod(strs_var[1]);
 						}
 						else if (strs_var[0].compare("L1SINR") == 0) {
-							//signalLimits->l1sinr = stod(strs_var[1]);
+							signalLimits->l1sinr = stod(strs_var[1]);
 						}
 						else if (strs_var[0].compare("L2SINR") == 0) {
-							//signalLimits->l2sinr = stod(strs_var[1]);
+							signalLimits->l2sinr = stod(strs_var[1]);
 						}
 					}
 				}
@@ -497,6 +504,8 @@ int main(int argc, char **argv) {
 			}
 
 			//UAV *newU = new UAV(uavPos, poiList, nu, movNt, movLt, txNt, txLt);
+
+			Generic::getInstance().setLimitsParam(signalLimits);
 
 			infile_pos.close();
 		}

@@ -74,6 +74,7 @@ public:
 	typedef struct pktToSend {
 		Packet *p;
 		UAV *u;
+		UAV *u_dest;
 		int tk;
 		int sub_ch;
 	} pktToSend_t;

@@ -123,7 +123,9 @@ void PoI::generatePackets_check(int tk) {
 
 void PoI::generatePackets(int tk) {
 	for (int i = 0; i < nPacket2Generate; i++) {
-		Packet *newp = new Packet(id);
+		Packet *newp = new Packet(id, tk);
+
+		std::cout << "PK:" << id << ":" << tk << " - Generating packet at PoI" << id << " at time slot " << tk << std::endl;
 
 		CommunicationManager::getInstance().sendPacketFromPoI(newp, tk);
 	}

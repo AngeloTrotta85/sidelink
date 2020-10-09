@@ -5,8 +5,13 @@
  *      Author: angelo
  */
 
+#include <iostream>     // std::cout
+#include <fstream>      // std::ifstream
+
 #include "Generic.h"
 #include "PoI.h"
+
+using namespace std;
 
 double Generic::getTime2Travel(MyCoord start, MyCoord end) {
 	return (start.distance(end) / maxVelocity);
@@ -48,5 +53,14 @@ void Generic::build_static_comm_task_set(int nsc, int nsubf_in_supf) {
 		}
 	}
 }
+
+void Generic::setMiscParam(std::string traceString) {
+		traceOutString = traceString;
+
+		ofstream f_out(traceOutString, ofstream::out);
+		if (f_out.is_open()) {
+			f_out.close();
+		}
+	}
 
 

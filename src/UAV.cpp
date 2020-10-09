@@ -8,6 +8,7 @@
 #include <iostream>     // std::cout
 #include <fstream>      // std::ifstream
 
+
 #include "CommunicationManager.h"
 #include "Generic.h"
 #include "RandomGenerator.h"
@@ -55,7 +56,7 @@ void UAV::initVars(MyCoord recCoord, std::list<PoI *> &poiList, int nu, int movN
 	tx_nt = txNt;
 	tx_lt = txLt;
 
-	logUAV = 2;
+	logUAV = 0;
 	sumLastFrameReceived = 0;
 
 	mov_y_vec.resize(mov_nt, 0);
@@ -1092,6 +1093,22 @@ void UAV::comm_directBS(int tk) {
 
 		CommunicationManager::getInstance().packetDeliveretToBS(p.pk);
 
+		std::cout << "PK:" << p.pk->sourcePoI << ":" << p.pk->genTime << " - UAV" << id << " I'm sending direct to the BS at time " << tk << std::endl;
+
+		ofstream f_out(Generic::getInstance().traceOutString, ofstream::out | ofstream::app);
+		if (f_out.is_open()) {
+			f_out <<
+					"U:" << id << ";" <<
+					"B:" << 0 << ";" <<
+					"TS:" << tk << ";" <<
+					"CH:" << 1 << ";" <<
+					"POI:" << p.pk->sourcePoI << ";" <<
+					"TX:" << p.pk->genTime <<
+					std::endl;
+
+			f_out.close();
+		}
+
 		delete (p.pk);
 	}
 }
@@ -1109,7 +1126,23 @@ void UAV::comm_multihop(int tk) {
 					//Packet *ps = pktQueue.front();
 					pktQueue.pop_front();
 
+					std::cout << "PK:" << pi.pk->sourcePoI << ":" << pi.pk->genTime << " - UAV" << id << " I'm sending multi-hop at time slot " << tk << std::endl;
+
 					CommunicationManager::getInstance().sendDataRB(this, pi.pk, tk, c);
+
+					/*ofstream f_out(Generic::getInstance().traceOutString, ofstream::out);
+					if (f_out.is_open()) {
+						f_out <<
+								"U:" << id << ";" <<
+								"U:" << xxx << ";" <<
+								"TS:" << tk << ";" <<
+								"CH:" << c << ";" <<
+								"POI:" << pi.pk->sourcePoI << ";" <<
+								"TX:" << pi.pk->genTime <<
+								std::endl;
+
+						f_out.close();
+					}*/
 				}
 				else {
 					break;

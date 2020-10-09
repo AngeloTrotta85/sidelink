@@ -10,7 +10,7 @@
 
 class Packet {
 public:
-	Packet(int idPoI);
+	Packet(int idPoI, int timeg);
 	virtual ~Packet() {};
 
 public:
@@ -18,6 +18,7 @@ public:
 	static int idPKTGen;
 
 	int sourcePoI;
+	int genTime;
 };
 
 #endif /* PACKET_H_ */
