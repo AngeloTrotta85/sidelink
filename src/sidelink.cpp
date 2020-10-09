@@ -205,7 +205,7 @@ int main(int argc, char **argv) {
 
 	//channels
 	int nsc = 5;
-	int nsubf_in_supf = 1000;
+	int nsubf_in_supf = 100;
 
 	double singlePoItest_distance = 100;
 

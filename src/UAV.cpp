@@ -55,7 +55,7 @@ void UAV::initVars(MyCoord recCoord, std::list<PoI *> &poiList, int nu, int movN
 	tx_nt = txNt;
 	tx_lt = txLt;
 
-	logUAV = 0;
+	logUAV = 2;
 	sumLastFrameReceived = 0;
 
 	mov_y_vec.resize(mov_nt, 0);
