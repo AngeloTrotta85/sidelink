@@ -10,6 +10,7 @@
 
 #include "list"
 #include "map"
+#include "vector"
 
 #include "UAV.h"
 #include "MyCoord.h"
@@ -36,6 +37,11 @@ public:
 
 class Generic {
 public:
+	typedef enum {
+		CBBA,
+		RANDOM
+	} AlgoType;
+public:
 	static Generic& getInstance(void) {
 		static Generic    instance; 	// Guaranteed to be destroyed.
 
@@ -48,7 +54,25 @@ private:
 		maxVelocity = 3;
 		commRange = 100;
 
+		uavDist = 1000;
+		pktLoad = 100;
+		superFrame = 20;
+		numSubChannels = 5;
+
 		signalLim = nullptr;
+		aType = CBBA;
+
+		dataGen = 0;
+		dataArrivedAtBS = 0;
+		dataFailed_Drop = 0;
+		dataFailed_Tx = 0;
+		dataFailed_Route = 0;
+
+		txCompetition.resize(20);
+		for (unsigned int ii = 0; ii < txCompetition.size(); ii++) {
+			txCompetition[ii] = 0;
+		}
+
 	};         // Constructor? (the {} brackets) are needed here.
 
 	// C++ 11
@@ -83,7 +107,7 @@ public:
 		uavDist= singlePoItest_distance;
 	}
 
-	void setMiscParam(std::string traceString);
+	void setMiscParam(std::string traceString, AlgoType at);
 	void setLimitsParam(SinrLimits *sl) {
 		signalLim = sl;
 	}
@@ -108,8 +132,19 @@ public:
 
 	std::string traceOutString;
 
+	AlgoType aType;
+
 	std::map<int, MyCoord> posTasks;
 	std::map<int, MyCoord> commTasks;
+
+	//stats
+	double dataGen;
+	double dataArrivedAtBS;
+	double dataFailed_Drop;
+	double dataFailed_Tx;
+	double dataFailed_Route;
+
+	std::vector<int> txCompetition;
 
 };
 

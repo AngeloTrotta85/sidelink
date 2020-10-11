@@ -30,7 +30,7 @@ void Simulator::run() {
 	timeSlot = Generic::getInstance().timeSlot;
 	endSimulation = false;
 	int logTime = 1000*2;
-	bool logSF = false;
+	bool logSF = true;
 
 	while (((end_time < 0) || (simulation_time <= end_time)) && (!endSimulation)) {
 
@@ -78,8 +78,10 @@ void Simulator::run() {
 		//}
 
 		//communicate control
-		for (auto& u : uavsList) {
-			u->comm_cbba(simulation_time);
+		if (Generic::getInstance().aType == Generic::CBBA) {
+			for (auto& u : uavsList) {
+				u->comm_cbba(simulation_time);
+			}
 		}
 
 
@@ -151,6 +153,20 @@ void Simulator::run() {
 			<< " " << avgMultipleTx
 			<< " " << pdr
 			<< endl;
+
+	cout << uavsList.size()
+						<< " " << Generic::getInstance().dataGen
+						<< " " << Generic::getInstance().dataArrivedAtBS
+						<< " " << Generic::getInstance().dataFailed_Drop
+						<< " " << Generic::getInstance().dataFailed_Tx
+						<< " " << Generic::getInstance().dataFailed_Route
+						<< " " << (Generic::getInstance().dataArrivedAtBS / Generic::getInstance().dataGen)
+						<< endl;
+
+	for (unsigned int i = 0; i < Generic::getInstance().txCompetition.size(); i++) {
+		cout << i << ":" << Generic::getInstance().txCompetition[i] << " - ";
+	}
+	cout << endl;
 
 }
 

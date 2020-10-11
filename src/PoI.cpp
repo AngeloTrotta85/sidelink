@@ -128,6 +128,8 @@ void PoI::generatePackets(int tk) {
 		std::cout << "PK:" << id << ":" << tk << " - Generating packet at PoI" << id << " at time slot " << tk << std::endl;
 
 		CommunicationManager::getInstance().sendPacketFromPoI(newp, tk);
+
+		Generic::getInstance().dataGen += 1;
 	}
 
 }

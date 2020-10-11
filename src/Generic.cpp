@@ -54,8 +54,10 @@ void Generic::build_static_comm_task_set(int nsc, int nsubf_in_supf) {
 	}
 }
 
-void Generic::setMiscParam(std::string traceString) {
+void Generic::setMiscParam(std::string traceString, AlgoType at) {
 		traceOutString = traceString;
+
+		aType = at;
 
 		ofstream f_out(traceOutString, ofstream::out);
 		if (f_out.is_open()) {

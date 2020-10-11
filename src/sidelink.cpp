@@ -200,10 +200,12 @@ int main(int argc, char **argv) {
 	int pkt_interval_slots = 1000;
 
 	//CBBA
-	double phase1_interval_sec = 3;
-	double phase1_interval_var = 1;
-	double cbba_beacon_interval_sec = 3;
-	double cbba_beacon_interval_var = 0.1;
+	double phase1_interval_sec = 1;
+	double phase1_interval_var = 0.1;
+	double cbba_beacon_interval_sec = 0.2;
+	double cbba_beacon_interval_var = 0.01;
+
+	Generic::AlgoType algoType = Generic::CBBA;
 
 	//channels
 	int nsc = 5;
@@ -237,6 +239,20 @@ int main(int argc, char **argv) {
 	const std::string &inputNumUAV = input.getCmdOption("-nu");
 	if (!inputNumUAV.empty()) {
 		nUAV = atoi(inputNumUAV.c_str());
+	}
+	const std::string &str_algoType = input.getCmdOption("-at");
+	if (!str_algoType.empty()) {
+		int aatt = atoi(str_algoType.c_str());
+		switch (aatt) {
+			case 0:
+				algoType = Generic::CBBA;
+				break;
+
+			default:
+				algoType = Generic::RANDOM;
+				break;
+		}
+
 	}
 	//const std::string &inputNumPoI = input.getCmdOption("-np");
 	//if (!inputNumPoI.empty()) {
@@ -322,7 +338,7 @@ int main(int argc, char **argv) {
 	Generic::getInstance().init(timeSlot);
 	Generic::getInstance().setUAVParam(velocity_ms);
 	Generic::getInstance().setCommParam(commRange, nsc, nsubf_in_supf, pkt_interval_npkt, singlePoItest_distance);
-	Generic::getInstance().setMiscParam(traceFile);
+	Generic::getInstance().setMiscParam(traceFile, algoType);
 
 	if (configFile.length() > 0) {
 		ifstream infile_pos;
@@ -380,14 +396,14 @@ int main(int argc, char **argv) {
 							//uavIdx = stoi(strs_var[1]);
 							//uavPos[uavIdx] = MyCoord::ZERO;
 							if (isUAVdef) {
-								newUAV = new UAV(stoi(strs_var[1]));
+								newUAV = new UAV(stoi(strs_var[1]) - 1);
 							}
 							else {
 								// in POI def
 								if (isPOIdef) {
 									//cout << "For PoI" << newPOI->id << " looking for UAV" << strs_var[1] << endl;
 									for (auto& uu : uavsList) {
-										if (uu->id == stoi(strs_var[1])) {
+										if (uu->id == (stoi(strs_var[1]) - 1)) {
 											newPOI->actual_coord = uu->actual_coord;
 											break;
 										}
@@ -415,7 +431,7 @@ int main(int argc, char **argv) {
 						}
 						else if (strs_var[0].compare("POI") == 0) {
 							if (isPOIdef) {
-								newPOI = new PoI(stoi(strs_var[1]));
+								newPOI = new PoI(stoi(strs_var[1]) - 1);
 							}
 						}
 						else if (strs_var[0].compare("BS") == 0) {
@@ -481,6 +497,15 @@ int main(int argc, char **argv) {
 
 			Generic::getInstance().build_static_comm_task_set(nsc, nsubf_in_supf);
 			nTasks_tx = Generic::getInstance().commTasks.size();
+
+			/*cout << "Created a comm task of " << nTasks_tx << " tasks";
+			cout << " starting from " << nsc << " channels and " << nsubf_in_supf << " timeslots" << endl;
+			for (auto& t : Generic::getInstance().commTasks) {
+				cout << t.first << " ---> " << t.second << endl;
+			}
+
+			fflush (stdout);
+			exit(0);*/
 
 			for (auto& u : uavsList) {
 				/*for (auto& pp : poisList) {

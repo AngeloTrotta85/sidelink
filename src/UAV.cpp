@@ -56,7 +56,7 @@ void UAV::initVars(MyCoord recCoord, std::list<PoI *> &poiList, int nu, int movN
 	tx_nt = txNt;
 	tx_lt = txLt;
 
-	logUAV = 0;
+	logUAV = 2;
 	sumLastFrameReceived = 0;
 
 	mov_y_vec.resize(mov_nt, 0);
@@ -388,7 +388,12 @@ void UAV::executePhase1_comm_check(int tk) {
 			//&&
 			//(!CommunicationManager::getInstance().isDirect(id))
 	) {
-		executePhase1_comm(tk);
+		if (Generic::getInstance().aType == Generic::CBBA) {
+			executePhase1_comm(tk);
+		}
+		else {
+			executePhase1_rand(tk);
+		}
 	}
 
 	/*if (next_phase1_comm_tk <= tk) {
@@ -409,7 +414,7 @@ void UAV::executePhase1_comm_check(int tk) {
 }
 void UAV::executePhase1_comm(int tk) {
 	//int my_tx_lt = CommunicationManager::getInstance().get_tx_lt(this);
-	int my_tx_lt = pktQueue.size() + sumLastFrameReceived;
+	int my_tx_lt = pktQueue.size() + sumLastFrameReceived; // pktQueue.size() is the queue now, sumLastFrameReceived is the prediction for the next frame
 
 	//cout << "UAV" << id << " - My TX_Lt: " << my_tx_lt << endl;
 
@@ -419,12 +424,35 @@ void UAV::executePhase1_comm(int tk) {
 //		}
 
 	if (logUAV > 0) {cout << "TIME: " << tk << " Starting phase_comm 1 for UAV" << id << " with position " << actual_coord << endl;}
+	if (logUAV > 0) {cout << "TIME: " << tk << " TX_Lt" << my_tx_lt << endl;}
 
 	if (logUAV > 0) {cout << "UAV" << id << " - BEFORE b ["; for (auto const &el : tx_b_vec) cout << el << " "; cout << "]" << endl;}
 	if (logUAV > 0) {cout << "UAV" << id << " - BEFORE p ["; for (auto const &el : tx_p_vec) cout << el << " "; cout << "]" << endl;}
 	if (logUAV > 0) {cout << "UAV" << id << " - BEFORE y ["; for (auto const &el : tx_y_vec) cout << el << " "; cout << "]" << endl;}
 	if (logUAV > 0) {cout << "UAV" << id << " - BEFORE z ["; for (auto const &el : tx_z_vec) cout << el << " "; cout << "]" << endl;}
 	if (logUAV > 0) {cout << "UAV" << id << " - BEFORE s ["; for (auto const &el : tx_s_vec) cout << el << " "; cout << "]" << endl;}
+
+	if (logUAV > 0) {
+		cout << "UAV" << id << " - Val [";
+		//for (auto const &el : tx_y_vec) {
+		for (unsigned int ii = 0; ii < tx_y_vec.size(); ii++) {
+			MyCoord pp = taskComMap[ii];
+			cout << calcSingleTxReward(pp.x, pp.y) << " ";
+		}
+		cout << "]" << endl;
+	}
+
+	if (logUAV > 0) {
+		cout << "UAV" << id << " - RSS [";
+		//for (auto const &el : tx_y_vec) {
+		for (unsigned int ii = 0; ii < tx_y_vec.size(); ii++) {
+			MyCoord pp = taskComMap[ii];
+			cout << rssiRCV_dBm[pp.x][pp.y] << " ";
+		}
+		cout << "]" << endl;
+	}
+
+
 
 	// DYNAMIC-VERSION
 	// if I have all the Lt tasks assigned, check if my bids are changed
@@ -631,6 +659,41 @@ void UAV::executePhase1_comm(int tk) {
 	//cout << "UAV" << id << " - Finish phase1: " << my_tx_lt << endl;
 }
 
+void UAV::executePhase1_rand(int tk) {
+	int my_tx_lt = pktQueue.size() + sumLastFrameReceived;
+	std::vector<int> vRand(tx_y_vec.size(), 0);
+
+	//cout << "executePhase1_rand 0" << endl;
+
+	for (unsigned int i=0; i<vRand.size(); i++) {
+		vRand[i] = i;
+	}
+
+	//cout << "executePhase1_rand 1" << endl;
+
+	std::random_shuffle(vRand.begin(), vRand.end());
+
+	tx_b_vec.clear();
+	tx_p_vec.clear();
+
+	//cout << "executePhase1_rand 2" << endl;
+
+	if (my_tx_lt >= ((int) tx_y_vec.size())) {
+		for (unsigned int i=0; i<vRand.size(); i++) {
+			tx_b_vec.push_back(vRand[i]);
+			tx_p_vec.push_back(vRand[i]);
+		}
+	}
+	else {
+		for (int i=0; i < my_tx_lt; i++) {
+			tx_b_vec.push_back(vRand[i]);
+			tx_p_vec.push_back(vRand[i]);
+		}
+	}
+
+	//cout << "executePhase1_rand 3" << endl;
+}
+
 void UAV::log_cout(int tk) {
 	//cout << "UAV" << id << " - TIME " << tk << " - LOG  b ["; for (auto const &el : mov_b_vec) cout << el << " "; cout << "]" << endl;
 	//cout << "UAV" << id << " - TIME " << tk << " - LOG  p ["; for (auto const &el : mov_p_vec) cout << el << " "; cout << "]" << endl;
@@ -818,12 +881,12 @@ double UAV::calcSingleTxReward(double xframe, double ychannel) {
 	//return (1.0 / (1.0 + rssiRCV[xframe][ychannel]));
 	double rssi = rssiRCV[xframe][ychannel];
 	double rssi_dbm = 10.0 * log10(1000.0*rssi);
-	double lb = rssi_dbm - (-95);
+	double lb = rssi_dbm - (-105);
 	if (lb < 0) {
 		return 1;
 	}
 	else {
-		double x = lb * 0.2;
+		double x = lb * 0.1;
 		return (1.0 / (1.0 + x));
 	}
 	//return (1.0 / (1.0 + rssiRCV[xframe][ychannel]));
@@ -839,15 +902,185 @@ void UAV::cbba_reset(int j) {
 	mov_z_vec[j] = -1;
 }
 
+void UAV::cbba_tx_update(int j, double ykj, int zkj) {
+	tx_y_vec[j] = ykj;
+	tx_z_vec[j] = zkj;
+}
+
+void UAV::cbba_tx_reset(int j) {
+	tx_y_vec[j] = 0;
+	tx_z_vec[j] = -1;
+}
+
 void UAV::rcvMessage(int tk, UAV *uSnd,
 			std::vector<double> &y_vec, std::vector<int> &z_vec, std::vector<int> &s_vec,
 			std::vector<double> &tx_y_vec, std::vector<int> &tx_z_vec, std::vector<int> &tx_s_vec) {
-	rcvMovMessage(tk, uSnd, y_vec, z_vec, s_vec);
+	//rcvMovMessage(tk, uSnd, y_vec, z_vec, s_vec);
 	rcvTxMessage(tk, uSnd, tx_y_vec, tx_z_vec, tx_s_vec);
 }
 
 void UAV::rcvTxMessage(int tk, UAV *uSnd, std::vector<double> &y_vec, std::vector<int> &z_vec, std::vector<int> &s_vec) {
 
+	if (logUAV > 0) {cout << "UAV" << id << " - TIME: " << tk << " - received packet from UAV" << uSnd->id << endl;}
+	if (logUAV > 0) {cout << "UAV" << id << " - RECEIVED y ["; for (auto const &el : y_vec) cout << el << " "; cout << "]" << endl;}
+	if (logUAV > 0) {cout << "UAV" << id << " - RECEIVED z ["; for (auto const &el : z_vec) cout << el << " "; cout << "]" << endl;}
+	if (logUAV > 0) {cout << "UAV" << id << " - RECEIVED s ["; for (auto const &el : s_vec) cout << el << " "; cout << "]" << endl;}
+	if (logUAV > 0) {cout << "UAV" << id << " - MY       b ["; for (auto const &el : tx_b_vec) cout << el << " "; cout << "]" << endl;}
+	if (logUAV > 0) {cout << "UAV" << id << " - MY       p ["; for (auto const &el : tx_p_vec) cout << el << " "; cout << "]" << endl;}
+	if (logUAV > 0) {cout << "UAV" << id << " - MY       y ["; for (auto const &el : tx_y_vec) cout << el << " "; cout << "]" << endl;}
+	if (logUAV > 0) {cout << "UAV" << id << " - MY       z ["; for (auto const &el : tx_z_vec) cout << el << " "; cout << "]" << endl;}
+	if (logUAV > 0) {cout << "UAV" << id << " - MY       s ["; for (auto const &el : tx_s_vec) cout << el << " "; cout << "]" << endl;}
+
+	//variable backup
+	std::vector<int> bkp_tx_z_vec(tx_z_vec);
+	std::vector<double> bkp_tx_y_vec(tx_y_vec);
+	std::list<int> bkp_tx_b_vec(tx_b_vec);
+	std::list<int> bkp_tx_p_vec(tx_p_vec);
+
+	for (int j = 0; j < ((int)(z_vec.size())); j++) {
+
+		if (z_vec[j] == uSnd->id) {					//k (sender) thinks z_kj is k
+			if (tx_z_vec[j] == id) {					//i (receiver) thinks z_ij is i
+				if (y_vec[j] > tx_y_vec[j]) cbba_tx_update(j, y_vec[j], z_vec[j]); //UPDATE;
+			}
+			else if (tx_z_vec[j] == uSnd->id) {		//i (receiver) thinks z_ij is k
+				cbba_tx_update(j, y_vec[j], z_vec[j]); //UPDATE;
+			}
+			else if (tx_z_vec[j] == -1) {  			//i (receiver) thinks z_ij is none
+				cbba_tx_update(j, y_vec[j], z_vec[j]); //UPDATE;
+			}
+			else {										//i (receiver) thinks z_ij is m neq {i,k}
+				if ((s_vec[tx_z_vec[j]] > tx_s_vec[tx_z_vec[j]]) || (y_vec[j] > tx_y_vec[j]))
+					cbba_tx_update(j, y_vec[j], z_vec[j]); //UPDATE;
+			}
+		}
+		else if (z_vec[j] == id) {					//k (sender) thinks z_kj is i
+			if (tx_z_vec[j] == id) {					//i (receiver) thinks z_ij is i
+				//LEAVE
+			}
+			else if (tx_z_vec[j] == uSnd->id) {		//i (receiver) thinks z_ij is k
+				cbba_tx_reset(j); //RESET;
+			}
+			else if (tx_z_vec[j] == -1) {  			//i (receiver) thinks z_ij is none
+				//LEAVE
+			}
+			else {										//i (receiver) thinks z_ij is m neq {i,k}
+				if (s_vec[tx_z_vec[j]] > tx_s_vec[tx_z_vec[j]]) cbba_tx_reset(j); //RESET;
+			}
+		}
+		else if (z_vec[j] == -1) {  				//k (sender) thinks z_kj is none
+			if (tx_z_vec[j] == id) {					//i (receiver) thinks z_ij is i
+				//LEAVE
+			}
+			else if (tx_z_vec[j] == uSnd->id) {		//i (receiver) thinks z_ij is k
+				cbba_tx_update(j, y_vec[j], z_vec[j]); //UPDATE;
+			}
+			else if (tx_z_vec[j] == -1) {  			//i (receiver) thinks z_ij is none
+				//LEAVE
+			}
+			else {										//i (receiver) thinks z_ij is m neq {i,k}
+				if (s_vec[tx_z_vec[j]] > tx_s_vec[tx_z_vec[j]]) cbba_tx_update(j, y_vec[j], z_vec[j]); //UPDATE;
+			}
+		}
+		else {										//k (sender) thinks z_kj is m neq {i,k}
+			if (tx_z_vec[j] == id) {					//i (receiver) thinks z_ij is i
+				if ((s_vec[tx_z_vec[j]] > tx_s_vec[tx_z_vec[j]]) || (y_vec[j] > tx_y_vec[j]))
+					cbba_tx_update(j, y_vec[j], z_vec[j]); //UPDATE;
+			}
+			else if (tx_z_vec[j] == uSnd->id) {		//i (receiver) thinks z_ij is k
+				if (s_vec[tx_z_vec[j]] > tx_s_vec[tx_z_vec[j]]){
+					cbba_tx_update(j, y_vec[j], z_vec[j]); //UPDATE;
+				}
+				else {
+					cbba_tx_reset(j); //RESET;
+				}
+			}
+			else if (tx_z_vec[j] == -1) {  			//i (receiver) thinks z_ij is none
+				if (s_vec[tx_z_vec[j]] > tx_s_vec[tx_z_vec[j]]) cbba_tx_update(j, y_vec[j], z_vec[j]); //UPDATE;
+			}
+			else if (tx_z_vec[j] == z_vec[j]) {  		//i (receiver) thinks z_ij is m
+				if (s_vec[tx_z_vec[j]] > tx_s_vec[tx_z_vec[j]]) cbba_tx_update(j, y_vec[j], z_vec[j]); //UPDATE;
+			}
+			else {										//i (receiver) thinks z_ij is n neq {m,i,k}
+				if ((s_vec[z_vec[j]] > tx_s_vec[z_vec[j]]) && (s_vec[tx_z_vec[j]] > tx_s_vec[tx_z_vec[j]])) {
+					cbba_tx_update(j, y_vec[j], z_vec[j]); //UPDATE;
+				}
+				else if((s_vec[z_vec[j]] > tx_s_vec[z_vec[j]]) && (y_vec[j] > tx_y_vec[j])) {
+					cbba_tx_update(j, y_vec[j], z_vec[j]); //UPDATE;
+				}
+				else if((s_vec[tx_z_vec[j]] > tx_s_vec[tx_z_vec[j]]) && (tx_s_vec[z_vec[j]] > s_vec[z_vec[j]])) {
+					cbba_tx_reset(j); //RESET;
+				}
+			}
+		}
+	}
+
+	//update S
+	tx_s_vec[id] = tk;
+	for (int k = 0; k < ((int)(tx_s_vec.size())); k++) {
+		if (k == uSnd->id) {
+			tx_s_vec[k] = tk;
+		}
+		else {
+			tx_s_vec[k] = (s_vec[k] > tx_s_vec[k]) ? s_vec[k] : tx_s_vec[k];
+		}
+	}
+	if (logUAV > 0) {cout << "UAV" << id << " - UPDATED  s ["; for (auto const &el : tx_s_vec) cout << el << " "; cout << "]" << endl;}
+
+
+	if (logUAV > 0) {cout << "UAV" << id << " - AFTER UP b ["; for (auto const &el : tx_b_vec) cout << el << " "; cout << "]" << endl;}
+	if (logUAV > 0) {cout << "UAV" << id << " - AFTER UP p ["; for (auto const &el : tx_p_vec) cout << el << " "; cout << "]" << endl;}
+	if (logUAV > 0) {cout << "UAV" << id << " - AFTER UP y ["; for (auto const &el : tx_y_vec) cout << el << " "; cout << "]" << endl;}
+	if (logUAV > 0) {cout << "UAV" << id << " - AFTER UP z ["; for (auto const &el : tx_z_vec) cout << el << " "; cout << "]" << endl;}
+
+	//variable to check changes
+	std::map<int, bool> mapChange;	//contains the map of changes
+	//cout << "UAV" << id << " - BEGIN The tasks that have changed ["; for (auto const &el : mapChange) cout << el.first << " "; cout << "]" << endl;
+	for (int j = 0; j < ((int) (tx_z_vec.size())); j++) {
+		//cout << "UAV" << id << " - Checking old value: " << bkp_tx_z_vec[j] << " with the new value: " << tx_z_vec[j] << " with my ID: " << id << endl;
+		if ((bkp_tx_z_vec[j] == id) && (tx_z_vec[j] != id)) {
+			mapChange[j] = true;
+			//cout << "UAV" << id << " - Task " << j << " has changed" << endl;
+		}
+	}
+	//cout << "UAV" << id << " - AFTER The tasks that have changed ["; for (auto const &el : mapChange) cout << el.first << " "; cout << "]" << endl;
+	if (mapChange.size() > 0) {		//something changed and have to remove
+		bool is_the_first = false;
+
+		auto it_b = tx_b_vec.begin();
+		while (it_b != tx_b_vec.end()) {
+			for (auto& mc : mapChange) {
+				if (mc.first == *it_b) {
+					is_the_first = true;
+					break;
+				}
+			}
+			if (is_the_first) {		// remove all the b from now on (and the respectively in p)
+
+				while (it_b != tx_b_vec.end()) {	//remove all the choice after the first
+					for (auto it_p = tx_p_vec.begin(); it_p != tx_p_vec.end(); it_p++) {		//search for the same task in p
+						if (*it_p == *it_b) {
+							tx_p_vec.erase(it_p);
+							break;
+						}
+					}
+
+					it_b = tx_b_vec.erase(it_b);
+				}
+
+				break; // break the while. I removed everything here
+			}
+
+			it_b++;
+		}
+	}
+
+
+	if (logUAV > 0) {cout << "UAV" << id << " - FINAL    b ["; for (auto const &el : tx_b_vec) cout << el << " "; cout << "]" << endl;}
+	if (logUAV > 0) {cout << "UAV" << id << " - FINAL    p ["; for (auto const &el : tx_p_vec) cout << el << " "; cout << "]" << endl;}
+	if (logUAV > 0) {cout << "UAV" << id << " - FINAL    y ["; for (auto const &el : tx_y_vec) cout << el << " "; cout << "]" << endl;}
+	if (logUAV > 0) {cout << "UAV" << id << " - FINAL    z ["; for (auto const &el : tx_z_vec) cout << el << " "; cout << "]" << endl;}
+	if (logUAV > 0) {cout << endl;}
 }
 
 void UAV::rcvMovMessage(int tk, UAV *uSnd, std::vector<double> &y_vec, std::vector<int> &z_vec, std::vector<int> &s_vec) {
@@ -1033,14 +1266,24 @@ void UAV::comm_cbba(int tk) {
 }
 
 void UAV::rcvPacketFromPoI(Packet *p, int tk) {
-	pktInfo_t new_pkt;
 
-	new_pkt.pk = p;
-	new_pkt.time_drop_tk = -1;
-	new_pkt.time_sent_tk = -1;
-	new_pkt.time_received_tk = tk;
 
-	pktQueue.push_back(new_pkt);
+	if (((int) pktQueue.size()) >= maxPacketQueue) {
+		CommunicationManager::getInstance().packetDroppedQueue(p);
+		delete p;
+
+		Generic::getInstance().dataFailed_Drop += 1;
+	}
+	else {
+		pktInfo_t new_pkt;
+
+		new_pkt.pk = p;
+		new_pkt.time_drop_tk = -1;
+		new_pkt.time_sent_tk = -1;
+		new_pkt.time_received_tk = tk;
+
+		pktQueue.push_back(new_pkt);
+	}
 
 	sumLastFrameReceived++;
 
@@ -1050,6 +1293,8 @@ void UAV::rcvPacketFromUAV(Packet *p, int tk) {
 	if (((int) pktQueue.size()) >= maxPacketQueue) {
 		CommunicationManager::getInstance().packetDroppedQueue(p);
 		delete p;
+
+		Generic::getInstance().dataFailed_Drop += 1;
 	}
 	else {
 		pktInfo_t new_pkt;
@@ -1092,6 +1337,7 @@ void UAV::comm_directBS(int tk) {
 		pktQueue.pop_front();
 
 		CommunicationManager::getInstance().packetDeliveretToBS(p.pk);
+		Generic::getInstance().dataArrivedAtBS += 1;
 
 		std::cout << "PK:" << p.pk->sourcePoI << ":" << p.pk->genTime << " - UAV" << id << " I'm sending direct to the BS at time " << tk << std::endl;
 
@@ -1116,6 +1362,17 @@ void UAV::comm_directBS(int tk) {
 void UAV::comm_multihop(int tk) {
 	if (pktQueue.size() > 0) {
 		//cout << "UAV" << id << " - Time " << tk << " - Multihop comm. I have " << pktQueue.size() << " packets to send" << endl;
+
+		if (logUAV > 0) {
+			cout << "UAV" << id << " - Time " << tk << " - Multihop comm. I have " << pktQueue.size() << " packets to send" << endl;
+			cout << "My booked channels are: ";
+			for (auto& b : tx_b_vec) {
+				MyCoord frame_channel = taskComMap[b];
+				cout << "[" << b << " -> " << frame_channel << "] ";
+			}
+			cout << endl;
+		}
+
 		std::list<int> bookedCh;
 		checkBookForNow(bookedCh, tk%Generic::getInstance().superFrame);
 		if (bookedCh.size() > 0) {
@@ -1126,7 +1383,10 @@ void UAV::comm_multihop(int tk) {
 					//Packet *ps = pktQueue.front();
 					pktQueue.pop_front();
 
-					std::cout << "PK:" << pi.pk->sourcePoI << ":" << pi.pk->genTime << " - UAV" << id << " I'm sending multi-hop at time slot " << tk << std::endl;
+					std::cout << "PK:" << pi.pk->sourcePoI << ":" << pi.pk->genTime << " - UAV" << id
+							<< " I'm sending multi-hop at time slot " << tk
+							<< " using channel " << c
+							<< std::endl;
 
 					CommunicationManager::getInstance().sendDataRB(this, pi.pk, tk, c);
 

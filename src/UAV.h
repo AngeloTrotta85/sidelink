@@ -44,8 +44,13 @@ public:
 	void executePhase1_comm_check(int tk);
 	void executePhase1_comm(int tk);
 
+	void executePhase1_rand(int tk);
+
 	void cbba_update(int j, double ykj, int zkj);
 	void cbba_reset(int j);
+
+	void cbba_tx_update(int j, double ykj, int zkj);
+	void cbba_tx_reset(int j);
 
 	void rcvMessage(int tk, UAV *uSnd,
 			std::vector<double> &y_vec, std::vector<int> &z_vec, std::vector<int> &s_vec,

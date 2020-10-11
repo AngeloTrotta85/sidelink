@@ -355,6 +355,39 @@ void CommunicationManager::sendDataRB(UAV *u, Packet *p, int timek, int channel)
 
 void CommunicationManager::manageTransmissionsTimeSlot(int timek) {
 	if (logSF) {cout << "CommunicationManager::manageTransmissionsTimeSlot BEGIN" << endl; fflush(stdout);}
+	std::map<int, std::list<UAV *>> uav_tx_Map;
+
+	for (auto& el : packetToSend) {
+		uav_tx_Map[el.first].clear();
+	}
+	for (auto& el : packetToSend) {
+		int channel = el.first;
+		for (auto& p : el.second) {
+			uav_tx_Map[channel].push_back(p.u);
+		}
+		/*if ( (el.second.size() < 1) || (el.second.size() >= Generic::getInstance().txCompetition.size()) ) {
+			std::cerr << "RRRRRRRRRR " << el.second.size() << std::endl;
+			exit(1);
+		}*/
+		/*if (el.second.size() > 0) {
+			Generic::getInstance().txCompetition[el.second.size() - 1] += 1;
+		}*/
+		if (timek > 10000) {
+			Generic::getInstance().txCompetition[el.second.size()] += 1;
+		}
+	}
+
+	int nncc = 0;
+	cout << "T:" << timek << " - ";
+	for (auto& ccc : uav_tx_Map) {
+		cout << "{ C:" << ccc.first << " -> [";
+		for (auto& uuu : ccc.second) {
+			cout << "U" << uuu->id << " ";
+		}
+		if (ccc.second.size() > 0) ++nncc;
+		cout << "]} ";
+	}
+	cout << " - Num channel used: " << nncc << endl;
 
 	for (auto& el : packetToSend) {
 		int channel = el.first;
@@ -382,11 +415,22 @@ void CommunicationManager::manageTransmissionsTimeSlot(int timek) {
 		//calculate the interference map
 		for (auto& u_rcv : uavList){
 			uav_interference_Map[u_rcv.second->id] = 0;
+
 			for (auto& p : el.second) {
-				if ( (p.u_dest != nullptr) && (p.u_dest->id != u_rcv.second->id) ) {
-					uav_interference_Map[u_rcv.second->id] += calcReceivedPower(p.u->actual_coord.distance(u_rcv.second->actual_coord));
+				if ( (p.u_dest != nullptr) && (p.u_dest->id != u_rcv.second->id) && (u_rcv.second->id != p.u->id) ) {
+					double actRSS = calcReceivedPower(p.u->actual_coord.distance(u_rcv.second->actual_coord));
+					uav_interference_Map[u_rcv.second->id] += actRSS;
+
+					/*std::cout << "T:" << timek << " - "
+							<< "C:" << channel << " - "
+							<< "Interference at UAV" << u_rcv.second->id << " is adding " << actRSS << " from UAV" << p.u->id
+							<< std::endl;*/
 				}
 			}
+			/*std::cout << "T:" << timek << " - "
+					<< "C:" << channel << " - "
+					<< "Interference at UAV" << u_rcv.second->id << " is " << uav_interference_Map[u_rcv.second->id] << std::endl;
+					*/
 		}
 		//calculate the interference RSSI for each UAV
 		/*for (auto& u_rcv : uavList){
@@ -412,7 +456,17 @@ void CommunicationManager::manageTransmissionsTimeSlot(int timek) {
 			if (p.u_dest != nullptr) {
 				UAV *u_dst = p.u_dest;
 
-				std::cout << "PK:" << pkt->sourcePoI << ":" << pkt->genTime << " - UAV" << u_src->id << " try to send to UAV" << u_dst->id << " at time slot " << timek << std::endl;
+				std::cout << "PK:" << pkt->sourcePoI << ":" << pkt->genTime << " - "
+						<< "T:" << timek << " - "
+						<< "C:" << channel << " - "
+						<< "UAV" << u_src->id << " try to send to UAV" << u_dst->id << " at time slot " << timek << std::endl;
+
+				std::cout << "PK:" << pkt->sourcePoI << ":" << pkt->genTime << " - "
+						<< "T:" << timek << " - "
+						<< "C:" << channel << " - "
+						<< "Interference at UAV" << u_dst->id << " is " << uav_interference_Map[u_dst->id]
+						<< "; UAV tx are " << uav_tx_Map[channel].size()
+						<< std::endl;
 
 				bool okTx = checkTxSD(p, el.second, u_dst, uav_interference_Map);
 				//u_src->updateRssi(timek, channel, rssi);
@@ -432,14 +486,22 @@ void CommunicationManager::manageTransmissionsTimeSlot(int timek) {
 				}
 
 				if (okTx) {
-					std::cout << "PK:" << pkt->sourcePoI << ":" << pkt->genTime << " - UAV" << u_src->id << " try to send to UAV" << u_dst->id << " at time slot " << timek << " - OK!" << std::endl;
+					std::cout << "PK:" << pkt->sourcePoI << ":" << pkt->genTime << " - "
+							<< "T:" << timek << " - "
+							<< "C:" << channel << " - "
+							<< "UAV" << u_src->id << " try to send to UAV" << u_dst->id << " at time slot " << timek << " - OK!" << std::endl;
 					u_dst->rcvPacketFromUAV(pkt, timek);
 				}
 				else {
-					std::cout << "PK:" << pkt->sourcePoI << ":" << pkt->genTime << " - UAV" << u_src->id << " try to send to UAV" << u_dst->id << " at time slot " << timek << " - FAILURE!" << std::endl;
+					std::cout << "PK:" << pkt->sourcePoI << ":" << pkt->genTime << " - "
+							<< "T:" << timek << " - "
+							<< "C:" << channel << " - "
+							<< "UAV" << u_src->id << " try to send to UAV" << u_dst->id << " at time slot " << timek << " - FAILURE!" << std::endl;
 					// drop packet not arrived
 					packetDropped(pkt);
 					delete (pkt);
+
+					Generic::getInstance().dataFailed_Tx += 1;
 				}
 
 			}
@@ -448,6 +510,8 @@ void CommunicationManager::manageTransmissionsTimeSlot(int timek) {
 				// drop, no connection
 				packetDropped(pkt);
 				delete (pkt);
+
+				Generic::getInstance().dataFailed_Route += 1;
 			}
 		}
 
@@ -636,6 +700,8 @@ bool CommunicationManager::checkTxSD (pktToSend_t pkt, std::list<pktToSend_t> &a
 	receivedPower *= chan_value;
 	*/
 
+
+
 	UAV *u_src = pkt.u;
 	double distance = u_src->actual_coord.distance(u_dst->actual_coord);
 	double receivedPower = calcReceivedPower(distance);
@@ -644,6 +710,8 @@ bool CommunicationManager::checkTxSD (pktToSend_t pkt, std::list<pktToSend_t> &a
 	//cout << "receivedPower: " << receivedPower << endl;
 
 	double interference = uav_interference_Map[u_src->id];
+
+	//interference = interference * 10;
 
 	// Calculate Noise Parameters
 	double temperature = 290; // Kelvin
@@ -660,11 +728,35 @@ bool CommunicationManager::checkTxSD (pktToSend_t pkt, std::list<pktToSend_t> &a
 	double sinr = receivedPower / (interference + total_noise);
 	double sinr_db = linear2dBm(sinr);
 
-	//cout << "sinr: " << sinr << endl;
-	//cout << "sinr_db: " << sinr_db << endl;
 
-	double sinr_low = -5;
-	double sinr_high = 25;
+	double l1 = -5;
+	double l2 = 20;
+
+	SinrLimits *signalLimits = Generic::getInstance().signalLim;
+	if (Generic::getInstance().signalLim != nullptr) {
+		//if (interference == 0) {
+		if (false) {
+			l1 = signalLimits->l1snr;
+			l2 = signalLimits->l2snr;
+		}
+		else {
+			l1 = signalLimits->l1sinr;
+			l2 = signalLimits->l2sinr;
+		}
+	}
+
+
+	std::cout << "PK:" << pkt.p->sourcePoI << ":" << pkt.p->genTime << " - "
+			<< "receivedPower: " << receivedPower << " - "
+			<< "total_noise: " << total_noise << " - "
+			<< "interference: " << interference << " - "
+			<< "sinr_db: " << sinr_db << " - "
+			<< "l1: " << l1 << " - "
+			<< "l2: " << l2
+			<< std::endl;
+
+	double sinr_low = l1;
+	double sinr_high = l2;
 	double total_samples = sinr_high - sinr_low;
 
 	double prob = 0;
@@ -718,8 +810,17 @@ bool CommunicationManager::chekcTxNoInterference (UAV *u_src, UAV *u_dest) {
 	//cout << "sinr: " << sinr << endl;
 	//cout << "sinr_db: " << sinr_db << endl;
 
-	double sinr_low = -5;
-	double sinr_high = 25;
+	double l1 = -5;
+	double l2 = 20;
+
+	SinrLimits *signalLimits = Generic::getInstance().signalLim;
+	if (Generic::getInstance().signalLim != nullptr) {
+		l1 = signalLimits->l1snr;
+		l2 = signalLimits->l2snr;
+	}
+
+	double sinr_low = l1;
+	double sinr_high = l2;
 	double total_samples = sinr_high - sinr_low;
 
 	double prob = 0;
