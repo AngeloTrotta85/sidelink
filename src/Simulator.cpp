@@ -13,15 +13,17 @@ using namespace std;
 Simulator::Simulator() {
 	simulation_time = 0;
 	end_time = 0;
+	stat_time = 0;
 	basestation = MyCoord::ZERO;
 	timeSlot = 1;
 	endSimulation = false;
 }
 
 
-void Simulator::init(int stime, int etime) {
+void Simulator::init(int stime, int etime, int staTime) {
 	simulation_time = stime;
 	end_time = etime;
+	stat_time = staTime;
 
 }
 
@@ -39,6 +41,10 @@ void Simulator::run() {
 		if (logSF) {cout << "Simulation check 1 - time " << simulation_time << endl; fflush(stdout);}
 
 		CommunicationManager::getInstance().update(simulation_time);
+
+		if (logSF) {cout << "Simulation check 1.1" << endl; fflush(stdout);}
+
+		Generic::getInstance().checkStat(simulation_time);
 
 		if (logSF) {cout << "Simulation check 2" << endl; fflush(stdout);}
 
@@ -155,19 +161,63 @@ void Simulator::run() {
 			<< endl;
 
 	cout << uavsList.size()
-						<< " " << Generic::getInstance().dataGen
-						<< " " << Generic::getInstance().dataArrivedAtBS
-						<< " " << Generic::getInstance().dataFailed_Drop
-						<< " " << Generic::getInstance().dataFailed_Tx
-						<< " " << Generic::getInstance().dataFailed_Route
-						<< " " << (Generic::getInstance().dataArrivedAtBS / Generic::getInstance().dataGen)
+						<< " " << Generic::getInstance().getDataGen()
+						<< " " << Generic::getInstance().getDataArrivedAtBs()
+						<< " " << Generic::getInstance().getDataFailedDrop()
+						<< " " << Generic::getInstance().getDataFailedTx()
+						<< " " << Generic::getInstance().getDataFailedRoute()
+						<< " " << (Generic::getInstance().getDataArrivedAtBs() / Generic::getInstance().getDataGen())
+						<< " " << Generic::getInstance().getDelayAvg()
 						<< endl;
 
-	for (unsigned int i = 0; i < Generic::getInstance().txCompetition.size(); i++) {
-		cout << i << ":" << Generic::getInstance().txCompetition[i] << " - ";
+	for (unsigned int i = 0; i < Generic::getInstance().getTxCompetition().size(); i++) {
+		//cout << i << ":" << Generic::getInstance().getTxCompetition()[i] << "-";
+		cout << Generic::getInstance().getTxCompetition()[i] << " ";
 	}
 	cout << endl;
 
+	for (auto& el : Generic::getInstance().getDataGenTime()) cout << el << " ";
+	cout << endl;
+
+	for (auto& el : Generic::getInstance().getDataArrivedAtBsTime()) cout << el << " ";
+	cout << endl;
+
+	for (auto& el : Generic::getInstance().getDataFailedDropTime()) cout << el << " ";
+	cout << endl;
+
+	for (auto& el : Generic::getInstance().getDataFailedTxTime()) cout << el << " ";
+	cout << endl;
+
+	for (auto& el : Generic::getInstance().getDataFailedRouteTime()) cout << el << " ";
+	cout << endl;
+
+	auto itGen = Generic::getInstance().getDataGenTime().begin();
+	auto itFailTx = Generic::getInstance().getDataFailedTxTime().begin();
+	while (
+			(itGen != Generic::getInstance().getDataGenTime().end()) &&
+			(itFailTx != Generic::getInstance().getDataFailedTxTime().end())
+	) {
+
+		cout << ((*itFailTx) / (*itGen)) << " ";
+
+		itGen++;
+		itFailTx++;
+	}
+	cout << endl;
+
+	itGen = Generic::getInstance().getDataGenTime().begin();
+	auto itArrived = Generic::getInstance().getDataArrivedAtBsTime().begin();
+	while (
+			(itGen != Generic::getInstance().getDataGenTime().end()) &&
+			(itArrived != Generic::getInstance().getDataArrivedAtBsTime().end())
+	) {
+
+		cout << ((*itArrived) / (*itGen)) << " ";
+
+		itGen++;
+		itArrived++;
+	}
+	cout << endl;
 }
 
 

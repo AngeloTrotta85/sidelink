@@ -52,7 +52,7 @@ public:
 
 public:
 
-	void init(int stime, int etime);
+	void init(int stime, int etime, int staTime);
 
 	void setUAVs(std::list<UAV *> &uList) {uavsList = uList;};
 	void setPoIs(std::list<PoI *> &pList) {poisList = pList;};
@@ -65,6 +65,7 @@ private:
 	MyCoord basestation;
 
 	int simulation_time;
+	int stat_time;
 	int end_time;
 	bool endSimulation;
 

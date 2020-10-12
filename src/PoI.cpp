@@ -129,7 +129,8 @@ void PoI::generatePackets(int tk) {
 
 		CommunicationManager::getInstance().sendPacketFromPoI(newp, tk);
 
-		Generic::getInstance().dataGen += 1;
+		//Generic::getInstance().dataGen += 1;
+		Generic::getInstance().setDataGen(1, tk);
 	}
 
 }

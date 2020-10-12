@@ -1272,7 +1272,8 @@ void UAV::rcvPacketFromPoI(Packet *p, int tk) {
 		CommunicationManager::getInstance().packetDroppedQueue(p);
 		delete p;
 
-		Generic::getInstance().dataFailed_Drop += 1;
+		//Generic::getInstance().dataFailed_Drop += 1;
+		Generic::getInstance().setDataFailedDrop(1, tk);
 	}
 	else {
 		pktInfo_t new_pkt;
@@ -1294,7 +1295,8 @@ void UAV::rcvPacketFromUAV(Packet *p, int tk) {
 		CommunicationManager::getInstance().packetDroppedQueue(p);
 		delete p;
 
-		Generic::getInstance().dataFailed_Drop += 1;
+		//Generic::getInstance().dataFailed_Drop += 1;
+		Generic::getInstance().setDataFailedDrop(1, tk);
 	}
 	else {
 		pktInfo_t new_pkt;
@@ -1337,7 +1339,9 @@ void UAV::comm_directBS(int tk) {
 		pktQueue.pop_front();
 
 		CommunicationManager::getInstance().packetDeliveretToBS(p.pk);
-		Generic::getInstance().dataArrivedAtBS += 1;
+		//Generic::getInstance().dataArrivedAtBS += 1;
+		Generic::getInstance().setDataArrivedAtBs(1, tk);
+		Generic::getInstance().addDelay(tk - p.pk->genTime);
 
 		std::cout << "PK:" << p.pk->sourcePoI << ":" << p.pk->genTime << " - UAV" << id << " I'm sending direct to the BS at time " << tk << std::endl;
 

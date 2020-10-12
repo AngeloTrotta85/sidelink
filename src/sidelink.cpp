@@ -177,6 +177,7 @@ int main(int argc, char **argv) {
 	string traceFile = "";
 
 	int time_N = 1 * 60 * 60 * 1000;
+	int time_S = time_N / 2;
 	int scenarioSize = 1000;
 	int nUAV = 4;
 	//int nPoI = 1;
@@ -190,6 +191,10 @@ int main(int argc, char **argv) {
 	//Communication
 	double commRange = 100;
 	SinrLimits *signalLimits = new SinrLimits();
+	signalLimits->useInterferenceLimits = false;
+	signalLimits->distMaxInterf = 1200;
+	signalLimits->distMaxUAV = 1000;
+	signalLimits->distMaxBS = 1000;
 
 	//UAV
 	double velocity_ms = 10;
@@ -202,8 +207,8 @@ int main(int argc, char **argv) {
 	//CBBA
 	double phase1_interval_sec = 1;
 	double phase1_interval_var = 0.1;
-	double cbba_beacon_interval_sec = 0.2;
-	double cbba_beacon_interval_var = 0.01;
+	double cbba_beacon_interval_sec = 0.25;
+	double cbba_beacon_interval_var = 0.02;
 
 	Generic::AlgoType algoType = Generic::CBBA;
 
@@ -236,6 +241,10 @@ int main(int argc, char **argv) {
 	if (!inputTimeSim.empty()) {
 		time_N = atoi(inputTimeSim.c_str());
 	}
+	const std::string &inputTimeStatSim = input.getCmdOption("-timeS");
+	if (!inputTimeStatSim.empty()) {
+		time_S = atoi(inputTimeStatSim.c_str());
+	}
 	const std::string &inputNumUAV = input.getCmdOption("-nu");
 	if (!inputNumUAV.empty()) {
 		nUAV = atoi(inputNumUAV.c_str());
@@ -261,6 +270,16 @@ int main(int argc, char **argv) {
 	const std::string &inputNumTasksM = input.getCmdOption("-ntM");
 	if (!inputNumTasksM.empty()) {
 		nTasks_mov = atoi(inputNumTasksM.c_str());
+	}
+	const std::string &string_interference = input.getCmdOption("-int");
+	if (!string_interference.empty()) {
+		int tmp = atoi(string_interference.c_str());
+		if (tmp == 0) {
+			signalLimits->useInterferenceLimits = false;
+		}
+		else {
+			signalLimits->useInterferenceLimits = true;
+		}
 	}
 	const std::string &inputNumNLM = input.getCmdOption("-ltM");
 	if (!inputNumNLM.empty()) {
@@ -335,7 +354,7 @@ int main(int argc, char **argv) {
 		max_queue = atoi(maxQueue_string.c_str());
 	}
 
-	Generic::getInstance().init(timeSlot);
+	Generic::getInstance().init(timeSlot, time_S);
 	Generic::getInstance().setUAVParam(velocity_ms);
 	Generic::getInstance().setCommParam(commRange, nsc, nsubf_in_supf, pkt_interval_npkt, singlePoItest_distance);
 	Generic::getInstance().setMiscParam(traceFile, algoType);
@@ -530,6 +549,10 @@ int main(int argc, char **argv) {
 
 			//UAV *newU = new UAV(uavPos, poiList, nu, movNt, movLt, txNt, txLt);
 
+			if (!signalLimits->useInterferenceLimits) {
+				signalLimits->distMaxInterf = numeric_limits<double>::max();
+				signalLimits->distMaxUAV = numeric_limits<double>::max();
+			}
 			Generic::getInstance().setLimitsParam(signalLimits);
 
 			infile_pos.close();
@@ -570,7 +593,7 @@ int main(int argc, char **argv) {
 
 	CommunicationManager::getInstance().init(uavsList, poisList, commRange, commRange, commRange, nsc);
 
-	Simulator::getInstance().init(0, time_N);
+	Simulator::getInstance().init(0, time_N, time_S);
 	Simulator::getInstance().setUAVs(uavsList);
 	Simulator::getInstance().setPoIs(poisList);
 	Simulator::getInstance().run();

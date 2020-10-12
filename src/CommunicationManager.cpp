@@ -64,6 +64,33 @@ void CommunicationManager::update(int tk) {
 
 	if (logSF) {cout << "CommunicationManager::update 1" << endl; fflush(stdout);}
 
+
+	auto itU1 = tmpUAVList.begin();
+	while (itU1 != tmpUAVList.end()) {
+		UAV *actUAV = *itU1;
+		if (actUAV->actual_coord.distance(MyCoord::ZERO) <= Generic::getInstance().signalLim->distMaxBS) {
+
+			node_t nu; // = {UAV_T, actUAV->id, -1, false};
+			node_t bs; // = {BS_T, -1, -1, true};
+
+			nu.t = UAV_T;
+			nu.uav = actUAV->id;
+
+			bs.t = BS_T;
+			bs.uav = BS_ID;
+
+			connGraph.push_back(std::make_pair(nu, bs));
+			actUAV->father = specialUAV_BS;
+			specialUAV_BS->childUAV.push_back(actUAV);
+
+			itU1 = tmpUAVList.erase(itU1);
+		}
+		else {
+			itU1++;
+		}
+	}
+
+	/*
 	auto itU = tmpUAVList.begin();
 	double distmin_bs = std::numeric_limits<double>::max();
 	auto itU_rm = tmpUAVList.end();
@@ -97,6 +124,7 @@ void CommunicationManager::update(int tk) {
 		cerr << "Errore in CommunicationManager::update" << endl;
 		exit(EXIT_FAILURE);
 	}
+	*/
 
 	/*
 	auto itU = tmpUAVList.begin();
@@ -372,9 +400,10 @@ void CommunicationManager::manageTransmissionsTimeSlot(int timek) {
 		/*if (el.second.size() > 0) {
 			Generic::getInstance().txCompetition[el.second.size() - 1] += 1;
 		}*/
-		if (timek > 10000) {
-			Generic::getInstance().txCompetition[el.second.size()] += 1;
-		}
+		//if (timek > 10000) {
+		//	Generic::getInstance().txCompetition[el.second.size()] += 1;
+		//}
+		Generic::getInstance().setTxCompetition(el.second.size(), 1, timek);
 	}
 
 	int nncc = 0;
@@ -417,7 +446,11 @@ void CommunicationManager::manageTransmissionsTimeSlot(int timek) {
 			uav_interference_Map[u_rcv.second->id] = 0;
 
 			for (auto& p : el.second) {
-				if ( (p.u_dest != nullptr) && (p.u_dest->id != u_rcv.second->id) && (u_rcv.second->id != p.u->id) ) {
+				if ( (p.u_dest != nullptr) &&
+						(p.u_dest->id != u_rcv.second->id) &&
+						(u_rcv.second->id != p.u->id) &&
+						(p.u->actual_coord.distance(u_rcv.second->actual_coord) <= Generic::getInstance().signalLim->distMaxInterf)
+				) {
 					double actRSS = calcReceivedPower(p.u->actual_coord.distance(u_rcv.second->actual_coord));
 					uav_interference_Map[u_rcv.second->id] += actRSS;
 
@@ -501,7 +534,8 @@ void CommunicationManager::manageTransmissionsTimeSlot(int timek) {
 					packetDropped(pkt);
 					delete (pkt);
 
-					Generic::getInstance().dataFailed_Tx += 1;
+					//Generic::getInstance().dataFailed_Tx += 1;
+					Generic::getInstance().setDataFailedTx(1, timek);
 				}
 
 			}
@@ -511,7 +545,8 @@ void CommunicationManager::manageTransmissionsTimeSlot(int timek) {
 				packetDropped(pkt);
 				delete (pkt);
 
-				Generic::getInstance().dataFailed_Route += 1;
+				//Generic::getInstance().dataFailed_Route += 1;
+				Generic::getInstance().setDataFailedRoute(1, timek);
 			}
 		}
 
@@ -704,6 +739,11 @@ bool CommunicationManager::checkTxSD (pktToSend_t pkt, std::list<pktToSend_t> &a
 
 	UAV *u_src = pkt.u;
 	double distance = u_src->actual_coord.distance(u_dst->actual_coord);
+
+	if (distance > Generic::getInstance().signalLim->distMaxUAV) {
+		return 0;
+	}
+
 	double receivedPower = calcReceivedPower(distance);
 
 	//cout << "receivedPower_db: " << receivedPower_db << endl;
